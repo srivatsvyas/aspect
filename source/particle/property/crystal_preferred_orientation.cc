@@ -22,7 +22,6 @@
 #include <aspect/geometry_model/interface.h>
 #include <aspect/gravity_model/interface.h>
 #include <aspect/adiabatic_conditions/interface.h>
-#include <aspect/citation_info.h>
 #include <aspect/utilities.h>
 
 #include <world_builder/grains.h>
