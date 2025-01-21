@@ -513,9 +513,9 @@ namespace aspect
            */
           inline
           double get_grain_boundary_velocity(const unsigned int cpo_data_position,
-                                                        const ArrayView<const double> &data,
-                                                        const unsigned int mineral_i,
-                                                        const unsigned int grain_i) const
+                                             const ArrayView<const double> &data,
+                                             const unsigned int mineral_i,
+                                             const unsigned int grain_i) const
           {
             return data[cpo_data_position + 12 + grain_i * 26 + mineral_i * (n_grains * 26 + 2)];
           }
@@ -531,10 +531,10 @@ namespace aspect
            */
           inline
           void set_grain_boundary_velocity(const unsigned int cpo_data_position,
-                                                       const ArrayView<double> &data,
-                                                       const unsigned int mineral_i,
-                                                       const unsigned int grain_i,
-                                                       const double grain_boundary_velocity) const
+                                           const ArrayView<double> &data,
+                                           const unsigned int mineral_i,
+                                           const unsigned int grain_i,
+                                           const double grain_boundary_velocity) const
           {
             data[cpo_data_position + 12 + grain_i * 26 + mineral_i * (n_grains * 26 + 2)] = grain_boundary_velocity;
           }
@@ -549,9 +549,9 @@ namespace aspect
            */
           inline
           std::array<double,4> get_dislocation_density(const unsigned int cpo_data_position,
-                                                              const ArrayView<const double> &data,
-                                                              const unsigned int mineral_i,
-                                                              const unsigned int grain_i) const
+                                                       const ArrayView<const double> &data,
+                                                       const unsigned int mineral_i,
+                                                       const unsigned int grain_i) const
           {
             std::array<double, 4>dislocation_density;
             for (unsigned int i = 0; i < 4; ++i)
@@ -572,10 +572,10 @@ namespace aspect
            */
           inline
           void set_dislocation_density(const unsigned int cpo_data_position,
-                                              const ArrayView<double> &data,
-                                              const unsigned int mineral_i,
-                                              const unsigned int grain_i,
-                                              const std::array<double,4> &dislocation_density ) const
+                                       const ArrayView<double> &data,
+                                       const unsigned int mineral_i,
+                                       const unsigned int grain_i,
+                                       const std::array<double,4> &dislocation_density ) const
           {
             for (unsigned int slip_system_i = 0; slip_system_i < 4; ++slip_system_i)
               {
@@ -593,9 +593,9 @@ namespace aspect
            */
           inline
           int get_grain_status(const unsigned int cpo_data_position,
-                                              const ArrayView<const double> &data,
-                                              const unsigned int mineral_i,
-                                              const unsigned int grain_i) const
+                               const ArrayView<const double> &data,
+                               const unsigned int mineral_i,
+                               const unsigned int grain_i) const
           {
             return data[cpo_data_position + 17 + grain_i * 26 + mineral_i * (n_grains * 26 + 2)];
           }
@@ -611,10 +611,10 @@ namespace aspect
            */
           inline
           void set_grain_status(const unsigned int cpo_data_position,
-                                            const ArrayView<double> &data,
-                                            const unsigned int mineral_i,
-                                            const unsigned int grain_i,
-                                            const int grain_status) const
+                                const ArrayView<double> &data,
+                                const unsigned int mineral_i,
+                                const unsigned int grain_i,
+                                const int grain_status) const
           {
             data[cpo_data_position + 17 + grain_i * 26 + mineral_i * (n_grains * 26 + 2)] = grain_status;
           }
@@ -630,9 +630,9 @@ namespace aspect
            */
           inline
           int get_dom_slip_system(const unsigned int cpo_data_position,
-                                               const ArrayView<const double> &data,
-                                               const unsigned int mineral_i,
-                                               const unsigned int grain_i) const
+                                  const ArrayView<const double> &data,
+                                  const unsigned int mineral_i,
+                                  const unsigned int grain_i) const
           {
             return data[cpo_data_position + 18 + grain_i * 26 + mineral_i * (n_grains * 26 + 2)];
           }
@@ -648,10 +648,10 @@ namespace aspect
            */
           inline
           void set_dom_slip_system(const unsigned int cpo_data_position,
-                                                const ArrayView<double> &data,
-                                                const unsigned int mineral_i,
-                                                const unsigned int grain_i,
-                                                const int tau_max_scmid_factor) const
+                                   const ArrayView<double> &data,
+                                   const unsigned int mineral_i,
+                                   const unsigned int grain_i,
+                                   const int tau_max_scmid_factor) const
           {
             data[cpo_data_position + 18 + grain_i * 26 + mineral_i * (n_grains * 26 + 2)] = tau_max_scmid_factor;
           }
@@ -666,9 +666,9 @@ namespace aspect
            */
           inline
           double get_strain_energy(const unsigned int cpo_data_position,
-                                            const ArrayView<const double> &data,
-                                            const unsigned int mineral_i,
-                                            const unsigned int grain_i) const
+                                   const ArrayView<const double> &data,
+                                   const unsigned int mineral_i,
+                                   const unsigned int grain_i) const
           {
             return data[cpo_data_position + 19 + grain_i * 26 + mineral_i * (n_grains * 26 + 2)];
           }
@@ -684,10 +684,10 @@ namespace aspect
            */
           inline
           void set_strain_energy(const unsigned int cpo_data_position,
-                                          const ArrayView<double> &data,
-                                          const unsigned int mineral_i,
-                                          const unsigned int grain_i,
-                                          const double strain_energy) const
+                                 const ArrayView<double> &data,
+                                 const unsigned int mineral_i,
+                                 const unsigned int grain_i,
+                                 const double strain_energy) const
           {
             data[cpo_data_position + 19 + grain_i * 26 + mineral_i * (n_grains * 26 + 2)] = strain_energy;
           }
@@ -702,9 +702,9 @@ namespace aspect
           */
           inline
           double get_surface_energy(const unsigned int cpo_data_position,
-                                   const ArrayView<const double> &data,
-                                   const unsigned int mineral_i,
-                                   const unsigned int grain_i) const
+                                    const ArrayView<const double> &data,
+                                    const unsigned int mineral_i,
+                                    const unsigned int grain_i) const
           {
             return data[cpo_data_position + 20 + grain_i * 26 + mineral_i * (n_grains * 26 + 2)];
           }
@@ -720,10 +720,10 @@ namespace aspect
            */
           inline
           void set_surface_energy(const unsigned int cpo_data_position,
-                                 const ArrayView<double> &data,
-                                 const unsigned int mineral_i,
-                                 const unsigned int grain_i,
-                                 const double surface_energy) const
+                                  const ArrayView<double> &data,
+                                  const unsigned int mineral_i,
+                                  const unsigned int grain_i,
+                                  const double surface_energy) const
           {
             data[cpo_data_position + 20 + grain_i * 26 + mineral_i * (n_grains * 26 + 2)] = surface_energy;
           }
@@ -738,9 +738,9 @@ namespace aspect
           */
           inline
           double get_strain_accumulated(const unsigned int cpo_data_position,
-                                      const ArrayView<const double> &data,
-                                      const unsigned int mineral_i,
-                                      const unsigned int grain_i) const
+                                        const ArrayView<const double> &data,
+                                        const unsigned int mineral_i,
+                                        const unsigned int grain_i) const
           {
             return data[cpo_data_position + 21 + grain_i * 26 + mineral_i * (n_grains * 26 + 2)];
           }
@@ -756,10 +756,10 @@ namespace aspect
            */
           inline
           void set_strain_accumulated(const unsigned int cpo_data_position,
-                                       const ArrayView<double> &data,
-                                       const unsigned int mineral_i,
-                                       const unsigned int grain_i,
-                                       const double strain_accumulated) const
+                                      const ArrayView<double> &data,
+                                      const unsigned int mineral_i,
+                                      const unsigned int grain_i,
+                                      const double strain_accumulated) const
           {
             data[cpo_data_position + 21 + grain_i * 26 + mineral_i * (n_grains * 26 + 2)] = strain_accumulated;
           }
@@ -773,9 +773,9 @@ namespace aspect
           */
           inline
           int get_slip_rate(const unsigned int cpo_data_position,
-                                               const ArrayView<const double> &data,
-                                               const unsigned int mineral_i,
-                                               const unsigned int grain_i) const
+                            const ArrayView<const double> &data,
+                            const unsigned int mineral_i,
+                            const unsigned int grain_i) const
           {
             return data[cpo_data_position + 22 + grain_i * 26 + mineral_i * (n_grains * 26 + 2)];
           }
@@ -791,19 +791,19 @@ namespace aspect
            */
           inline
           void set_slip_rate(const unsigned int cpo_data_position,
-                                             const ArrayView<double> &data,
-                                             const unsigned int mineral_i,
-                                             const unsigned int grain_i,
-                                             const int slip_rate) const
+                             const ArrayView<double> &data,
+                             const unsigned int mineral_i,
+                             const unsigned int grain_i,
+                             const int slip_rate) const
           {
             data[cpo_data_position + 22 + grain_i * 26 + mineral_i * (n_grains * 26 + 2)] = slip_rate;
           }
-          
+
           inline
           double get_rx_fraction(const unsigned int cpo_data_position,
-                                               const ArrayView<const double> &data,
-                                               const unsigned int mineral_i,
-                                               const unsigned int grain_i) const
+                                 const ArrayView<const double> &data,
+                                 const unsigned int mineral_i,
+                                 const unsigned int grain_i) const
           {
             return data[cpo_data_position + 23 + grain_i * 26 + mineral_i * (n_grains * 26 + 2)];
           }
@@ -819,19 +819,19 @@ namespace aspect
            */
           inline
           void set_rx_fraction(const unsigned int cpo_data_position,
-                                             const ArrayView<double> &data,
-                                             const unsigned int mineral_i,
-                                             const unsigned int grain_i,
-                                             const double rx_fraction) const
+                               const ArrayView<double> &data,
+                               const unsigned int mineral_i,
+                               const unsigned int grain_i,
+                               const double rx_fraction) const
           {
             data[cpo_data_position + 23 + grain_i * 26 + mineral_i * (n_grains * 26 + 2)] = rx_fraction;
           }
 
           inline
           double get_dis_invariant(const unsigned int cpo_data_position,
-                                               const ArrayView<const double> &data,
-                                               const unsigned int mineral_i,
-                                               const unsigned int grain_i) const
+                                   const ArrayView<const double> &data,
+                                   const unsigned int mineral_i,
+                                   const unsigned int grain_i) const
           {
             return data[cpo_data_position + 24 + grain_i * 26 + mineral_i * (n_grains * 26 + 2)];
           }
@@ -847,19 +847,19 @@ namespace aspect
            */
           inline
           void set_dis_invariant(const unsigned int cpo_data_position,
-                                             const ArrayView<double> &data,
-                                             const unsigned int mineral_i,
-                                             const unsigned int grain_i,
-                                             const double dis_invariant) const
+                                 const ArrayView<double> &data,
+                                 const unsigned int mineral_i,
+                                 const unsigned int grain_i,
+                                 const double dis_invariant) const
           {
             data[cpo_data_position + 24 + grain_i * 26 + mineral_i * (n_grains * 26 + 2)] = dis_invariant;
           }
 
           inline
           double get_dif_invariant(const unsigned int cpo_data_position,
-                                               const ArrayView<const double> &data,
-                                               const unsigned int mineral_i,
-                                               const unsigned int grain_i) const
+                                   const ArrayView<const double> &data,
+                                   const unsigned int mineral_i,
+                                   const unsigned int grain_i) const
           {
             return data[cpo_data_position + 25 + grain_i * 26 + mineral_i * (n_grains * 26 + 2)];
           }
@@ -875,19 +875,19 @@ namespace aspect
            */
           inline
           void set_dif_invariant(const unsigned int cpo_data_position,
-                                             const ArrayView<double> &data,
-                                             const unsigned int mineral_i,
-                                             const unsigned int grain_i,
-                                             const double dif_invariant) const
+                                 const ArrayView<double> &data,
+                                 const unsigned int mineral_i,
+                                 const unsigned int grain_i,
+                                 const double dif_invariant) const
           {
             data[cpo_data_position + 25 + grain_i * 26 + mineral_i * (n_grains * 26 + 2)] = dif_invariant;
           }
 
           inline
           double get_strain_difference(const unsigned int cpo_data_position,
-                                               const ArrayView<const double> &data,
-                                               const unsigned int mineral_i,
-                                               const unsigned int grain_i) const
+                                       const ArrayView<const double> &data,
+                                       const unsigned int mineral_i,
+                                       const unsigned int grain_i) const
           {
             return data[cpo_data_position + 26 + grain_i * 26 + mineral_i * (n_grains * 26 + 2)];
           }
@@ -903,19 +903,19 @@ namespace aspect
            */
           inline
           void set_strain_difference(const unsigned int cpo_data_position,
-                                             const ArrayView<double> &data,
-                                             const unsigned int mineral_i,
-                                             const unsigned int grain_i,
-                                             const double strain_difference) const
+                                     const ArrayView<double> &data,
+                                     const unsigned int mineral_i,
+                                     const unsigned int grain_i,
+                                     const double strain_difference) const
           {
             data[cpo_data_position + 26 + grain_i * 26 + mineral_i * (n_grains * 26 + 2)] = strain_difference;
           }
 
           inline
           int get_lifetime(const unsigned int cpo_data_position,
-                                               const ArrayView<const double> &data,
-                                               const unsigned int mineral_i,
-                                               const unsigned int grain_i) const
+                           const ArrayView<const double> &data,
+                           const unsigned int mineral_i,
+                           const unsigned int grain_i) const
           {
             return data[cpo_data_position + 27 + grain_i * 26 + mineral_i * (n_grains * 26 + 2)];
           }
@@ -931,13 +931,13 @@ namespace aspect
            */
           inline
           void set_lifetime(const unsigned int cpo_data_position,
-                                             const ArrayView<double> &data,
-                                             const unsigned int mineral_i,
-                                             const unsigned int grain_i,
-                                             const int lifetime) const
+                            const ArrayView<double> &data,
+                            const unsigned int mineral_i,
+                            const unsigned int grain_i,
+                            const int lifetime) const
           {
             data[cpo_data_position + 27 + grain_i * 26 + mineral_i * (n_grains * 26 + 2)] = lifetime;
-          }          
+          }
 
         private:
           /**
@@ -1097,7 +1097,7 @@ namespace aspect
           std::vector<double> drexpp_mobility;
 
           double interfacial_energy;
-          
+
           std::unique_ptr<MaterialModel::Rheology::DiffusionCreep<dim>> rheology_diff;
           std::unique_ptr<MaterialModel::Rheology::DislocationCreep<dim>> rheology_disl;
           std::unique_ptr<MaterialModel::Rheology::ViscoPlastic<dim>> rheology_vipl;

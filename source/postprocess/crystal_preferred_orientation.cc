@@ -520,9 +520,9 @@ namespace aspect
 
                           case Output::DislocationDensity:
                             dislocation_density = cpo_particle_property.get_dislocation_density(cpo_data_position,
-                                                                                                       properties,
-                                                                                                       write_raw_cpo[property_i].first,
-                                                                                                       grain);
+                                                                                                properties,
+                                                                                                write_raw_cpo[property_i].first,
+                                                                                                grain);
 
                             string_stream_content_raw <<   dislocation_density[0] << " "
                                                       <<   dislocation_density[1] << " "
@@ -779,46 +779,46 @@ namespace aspect
                           case Output::RecrystalizationFraction:
                           {
                             string_stream_content_draw_volume_weighting << cpo_particle_property.get_rx_fraction(
-                                                        cpo_data_position,
-                                                        properties,
-                                                        write_raw_cpo[property_i].first,
-                                                        grain) << " ";
+                                                                          cpo_data_position,
+                                                                          properties,
+                                                                          write_raw_cpo[property_i].first,
+                                                                          grain) << " ";
                             break;
                           }
                           case Output::DifStrainRate:
                           {
                             string_stream_content_draw_volume_weighting << cpo_particle_property.get_dif_invariant(
-                                                        cpo_data_position,
-                                                        properties,
-                                                        write_raw_cpo[property_i].first,
-                                                        grain) << " ";
+                                                                          cpo_data_position,
+                                                                          properties,
+                                                                          write_raw_cpo[property_i].first,
+                                                                          grain) << " ";
                             break;
                           }
                           case Output::DisStrainRate:
                           {
                             string_stream_content_draw_volume_weighting << cpo_particle_property.get_dis_invariant(
-                                                        cpo_data_position,
-                                                        properties,
-                                                        write_raw_cpo[property_i].first,
-                                                        grain) << " ";
+                                                                          cpo_data_position,
+                                                                          properties,
+                                                                          write_raw_cpo[property_i].first,
+                                                                          grain) << " ";
                             break;
                           }
                           case Output::StrainDifference:
                           {
                             string_stream_content_draw_volume_weighting << cpo_particle_property.get_strain_difference(
-                                                        cpo_data_position,
-                                                        properties,
-                                                        write_raw_cpo[property_i].first,
-                                                        grain) << " ";
+                                                                          cpo_data_position,
+                                                                          properties,
+                                                                          write_raw_cpo[property_i].first,
+                                                                          grain) << " ";
                             break;
                           }
                           case Output::LifeTime:
                           {
                             string_stream_content_draw_volume_weighting << cpo_particle_property.get_lifetime(
-                                                        cpo_data_position,
-                                                        properties,
-                                                        write_raw_cpo[property_i].first,
-                                                        grain) << " ";
+                                                                          cpo_data_position,
+                                                                          properties,
+                                                                          write_raw_cpo[property_i].first,
+                                                                          grain) << " ";
                             break;
                           }
                           default:
@@ -965,11 +965,11 @@ namespace aspect
       if (string == "Accumulated strain")
         return Output::AccumulatedStrain;
       if (string == "Rx fractions")
-        return Output::RecrystalizationFraction;  
+        return Output::RecrystalizationFraction;
       if (string == "diffusion strain rate")
-        return Output::DifStrainRate;  
+        return Output::DifStrainRate;
       if (string == "dislocation strain rate")
-        return Output::DisStrainRate;  
+        return Output::DisStrainRate;
       if (string == "strain difference")
         return Output::StrainDifference;
       if (string == "lifetime")
