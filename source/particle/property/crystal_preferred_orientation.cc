@@ -1355,6 +1355,7 @@ namespace aspect
                      } 
                     else
                      {
+                      std::cout<<"Buffer vector position = " << buffer_vector_counter<<std::endl;
                       if(buffer_vector_counter == n_grains_buffer)
                        {
                           std::sort(buffer_vector.begin(), buffer_vector.end(),
@@ -1364,6 +1365,8 @@ namespace aspect
                             });
 
                           buffer_vector_counter = 0;
+                          std::cout<<"I sorted"<<std::endl;
+                      
                        }
                        
                        double replaced_grain_size;
@@ -1463,12 +1466,35 @@ namespace aspect
         const std::array< double, 3 > eigenvalues = dealii::eigenvalues(strain_rate);
         const double nondimensionalization_value = std::max(std::abs(eigenvalues[0]),std::abs(eigenvalues[2]));
         const std::array<double, 3> eigstress = dealii::eigenvalues(deviatoric_stress);
-        const double differential_stress = eigstress[0] - eigstress[dim -1];
+        const double differential_stress = 2e8;
 
         // Constants -> the values below are for olivine alone (SV: Do I add the citations?)
         const double shear_modulus = 8.0 * std::pow(10.0,10.0);
         const double burgers_vector = 5.0 * std::pow(10.0,-10.0);
         std::cout<<"differential stress = "<<differential_stress<<std::endl;
+        const double pressure = 3e8;
+        const double temperature =1200. + 273.15; 
+         /* 
+           Constants for the calculation of rheology. These are hardcoded values of olivine & pyroxene rheology (see supplementary material Dannberg et al, 2017)
+        */
+        /*
+           SV_uncomment - comment out the block of code below
+        */ 
+        const double pre_exponential_dif = 1.25 * std::pow(10,-15);
+        const double pre_exponential_dis = 8.33 * std::pow(10,-17);
+
+        const double exponent_dif = 1.;
+        const double exponent_dis = 3.5;
+
+        const double exponent_grain_size = 3;
+
+        const double activation_energy_dif = 3.75 * std::pow(10,5) ;
+        const double activation_energy_dis = 5.3 * std::pow(10,5);
+
+        const double activation_volume_dif = 6 * std::pow(10,-6);
+        const double activation_volume_dis = 1.4 * std::pow(10,-5);
+    
+        /*
         // Rheology
         // Divvying up the strain rate tensor and velocity gradient tensor into diffusion and dislocation creep
         for (unsigned int grain_i = 0; grain_i < n_grains; ++grain_i)
@@ -1512,6 +1538,39 @@ namespace aspect
                 dislocation_velocity_gradient[grain_i] = 0.;
               }
           }
+        */
+        
+         // Calculating chi_diff
+        for(unsigned int grain_i = 0; grain_i < n_grains; ++grain_i)
+        {
+          if((get_volume_fractions_grains(cpo_index,data,mineral_i,grain_i) > 0.) && (this->get_time() !=0))
+          {
+            
+            const double grain_size = get_volume_fractions_grains(cpo_index,data,mineral_i,grain_i);
+            const double strain_rate_dif = pre_exponential_dif * differential_stress * std::pow(grain_size,-1*exponent_grain_size) * exp(-1 *(activation_energy_dif + (pressure * activation_volume_dif))/(constants::gas_constant * temperature));
+            const double strain_rate_dis = pre_exponential_dis * std::pow(differential_stress,exponent_dis) * exp(-1 *(activation_energy_dis + (pressure * activation_volume_dis))/(constants::gas_constant * temperature));
+            
+            const double total = strain_rate_dif + strain_rate_dis;
+           //const double chi_dif = strain_rate_dif/std::sqrt(std::max(-second_invariant(strain_rate), 0.));
+            const double chi_dif = strain_rate_dif/total;
+           set_strain_difference(cpo_index,data,mineral_i,grain_i,chi_dif);
+           
+            diffusion_strain_rate[grain_i] = chi_dif * strain_rate;
+            dislocation_strain_rate[grain_i] = strain_rate - diffusion_strain_rate[grain_i];
+
+            diffusion_velocity_gradient[grain_i] = diffusion_strain_rate[grain_i];
+            dislocation_velocity_gradient[grain_i] = velocity_gradient_tensor - diffusion_velocity_gradient[grain_i];
+          }
+          else
+          {
+            diffusion_strain_rate[grain_i] = 0.;
+            dislocation_strain_rate[grain_i] = 0.;
+
+            diffusion_velocity_gradient[grain_i] = 0.;
+            dislocation_velocity_gradient[grain_i] = 0.;
+            set_strain_difference(cpo_index,data,mineral_i,grain_i,0.);;
+          }
+        }
 
         // first compute the amount of slip, G, strain accumulated and dislocation density for n_grains, as long as grain is initialized, i.e grain size is not equal to 0
         for (unsigned int grain_i = 0; grain_i < n_grains; ++grain_i)
@@ -1679,12 +1738,16 @@ namespace aspect
 
                         double rho_ref;
                         // Calculation of rho_ref
-                        for (unsigned int composition = 0; composition < volume_fractions.size(); composition++)
+                        /*
+                         for (unsigned int composition = 0; composition < volume_fractions.size(); composition++)
                           {
                             ref[composition] = std::pow(non_dimensionalization/dislocation_strain_rates[composition],1./3.5);
                           }
                         const double stress_ref = MaterialModel::MaterialUtilities::average_value(volume_fractions, ref, MaterialModel::MaterialUtilities::harmonic);
                         rho_ref = std::pow(stress_ref/(0.5 * shear_modulus * burgers_vector),exponent_p);
+                        */
+                        const double ref_stress = std::pow(non_dimensionalization/(pre_exponential_dis * exp(-1 * (activation_energy_dis + (activation_volume_dis * pressure))/(constants::gas_constant * temperature))),1./3.5);
+                         rho_ref = std::pow(ref_stress /(0.5 * shear_modulus * burgers_vector),exponent_p);
 
                         const double rhos = rho_ref * std::pow(tau[indices[slip_system_i]],exponent_p-stress_exponent) *
                                             std::pow(std::abs(e_s/non_dimensionalization),exponent_p/stress_exponent);
