@@ -1286,9 +1286,10 @@ namespace aspect
           std::shared_ptr<MaterialModel::MaterialUtilities::PhaseFunction<dim>> phase_function;
           /** @} */
 
+          //MaterialModel::MaterialUtilities::PhaseFunction<dim> phase_function;          //Commented_lines
           
-
           
+          /** @} */
 
       };
     }
