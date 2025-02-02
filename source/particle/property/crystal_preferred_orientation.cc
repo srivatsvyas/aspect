@@ -1447,7 +1447,7 @@ namespace aspect
         std::vector<Tensor<1,3>> spin_vectors(n_grains);
         std::vector<double> schmid_factor_max(n_grains);
         double recrystalization_increment;
-        std::vector<double> recrystalized_grain_volume(n_grains);
+        std::vector<double> recrystalized_grain_size(n_grains);
         std::vector<std::array<Tensor<2,3>,4>> global_slip_system(n_grains);
         std::vector<double> accumulated_strain(n_grains);
         std::vector<bool> rx_now(n_grains);
@@ -1457,6 +1457,7 @@ namespace aspect
         std::vector<int> lifetime(n_grains);
         std::vector<std::array<double,4>> schmid_factor(n_grains);
         std::vector<double> rho_scale(n_grains);
+        std::vector<double> diff_stress(n_grains);
         std::vector<SymmetricTensor<2,3>> diffusion_strain_rate(n_grains);
         std::vector<SymmetricTensor<2,3>> dislocation_strain_rate(n_grains);
         std::vector<Tensor<2,3>> diffusion_velocity_gradient(n_grains);
@@ -1474,24 +1475,26 @@ namespace aspect
         std::cout<<"differential stress = "<<differential_stress<<std::endl;
         const double pressure = 3e8;
         const double temperature =1200. + 273.15; 
-         /* 
+        
+        /* 
            Constants for the calculation of rheology. These are hardcoded values of olivine & pyroxene rheology (see supplementary material Dannberg et al, 2017)
         */
         /*
            SV_uncomment - comment out the block of code below
         */ 
+
         const double pre_exponential_dif = 1.25 * std::pow(10,-15);
         const double pre_exponential_dis = 8.33 * std::pow(10,-17);
 
         const double exponent_dif = 1.;
         const double exponent_dis = 3.5;
 
-        const double exponent_grain_size = 3;
+        const double exponent_grain_size = 3.;
 
         const double activation_energy_dif = 3.75 * std::pow(10,5) ;
         const double activation_energy_dis = 5.3 * std::pow(10,5);
 
-        const double activation_volume_dif = 6 * std::pow(10,-6);
+        const double activation_volume_dif = 6.* std::pow(10,-6);
         const double activation_volume_dis = 1.4 * std::pow(10,-5);
     
         /*
@@ -1553,7 +1556,7 @@ namespace aspect
             const double total = strain_rate_dif + strain_rate_dis;
            //const double chi_dif = strain_rate_dif/std::sqrt(std::max(-second_invariant(strain_rate), 0.));
             const double chi_dif = strain_rate_dif/total;
-           set_strain_difference(cpo_index,data,mineral_i,grain_i,chi_dif);
+            set_strain_difference(cpo_index,data,mineral_i,grain_i,chi_dif);
            
             diffusion_strain_rate[grain_i] = chi_dif * strain_rate;
             dislocation_strain_rate[grain_i] = strain_rate - diffusion_strain_rate[grain_i];
@@ -1717,6 +1720,16 @@ namespace aspect
                   }
                 set_strain_accumulated(cpo_index,data,mineral_i,grain_i,strain_accumulated[grain_i]);
 
+                // Compute differential stress for this grain
+                if(this->get_time()!= 0)
+                {
+                  diff_stress[grain_i] = std::pow(std::sqrt(std::max(-second_invariant(strrate), 0.))/(pre_exponential_dis * exp(-1 * (activation_energy_dis + (activation_volume_dis * pressure))/(constants::gas_constant * temperature))),1./3.5);
+                }
+                else
+                {
+                  diff_stress[grain_i] = 0.;
+                }
+
                 // Compute sstrain energy for this grain (abbreviated Estr)
                 // For olivine: DREX only sums over 1-3. But Christopher Thissen's matlab
                 // code (https://github.com/cthissen/Drex-MATLAB) corrected
@@ -1791,25 +1804,41 @@ namespace aspect
         double bulk_piezometer;
         std::array<double, 2> A = {{0.015,std::pow(10,3.8)}};
         std::array<double, 2> m = {{-1.33, -1.28}};
-        if (t!= 0)
+       // if (t!= 0)
+         // {
+           // bulk_piezometer = A[mineral_i] * std::pow(differential_stress/1e6,m[mineral_i]);
+         // }
+        //else
+          //{
+            //bulk_piezometer = 0.5;
+          //}
+        for (unsigned int grain_i = 0; grain_i < n_grains; grain_i++)
           {
-            bulk_piezometer = A[mineral_i] * std::pow(differential_stress/1e6,m[mineral_i]);
+            if ((t!= 0)&&(get_volume_fractions_grains(cpo_index,data,mineral_i,grain_i)>0.))
+          {
+            recrystalized_grain_size[grain_i] = A[mineral_i] * std::pow(differential_stress/1e6,m[mineral_i]);
           }
         else
           {
-            bulk_piezometer = 0.5;
+            recrystalized_grain_size[grain_i] = 0.5;
           }
-        for (unsigned int grain_i = 0; grain_i < n_grains; grain_i++)
-          {
-            recrystalized_grain_volume[grain_i] = bulk_piezometer;
           }
 
         for (unsigned int grain_i = 0; grain_i < n_grains; ++grain_i)
           {
             if ((get_volume_fractions_grains(cpo_index,data,mineral_i,grain_i) > 0.) && (get_strain_accumulated(cpo_index,data,mineral_i,grain_i) >= 0.25))
               {
+                
                 recrystalized_fractions[grain_i] = get_rx_fraction(cpo_index,data,mineral_i,grain_i);
-                recrystalized_fractions[grain_i] += (avrami_slope_input * (get_strain_accumulated(cpo_index,data,mineral_i,grain_i) - 0.25));
+                if(get_strain_accumulated(cpo_index,data,mineral_i,grain_i) - 0.25 <= strain_increment[grain_i])
+                {
+                  recrystalized_fractions[grain_i] += (avrami_slope_input * (get_strain_accumulated(cpo_index,data,mineral_i,grain_i) - 0.25));
+                }
+                else
+                {
+                  recrystalized_fractions[grain_i] += (avrami_slope_input * strain_increment[grain_i]);
+
+                }
                 if (recrystalized_fractions[grain_i] > 1.0)
                   recrystalized_fractions[grain_i] = 1.0;
               }
@@ -1823,7 +1852,7 @@ namespace aspect
         this->recrystalize_grains(cpo_index,
                                   data,
                                   mineral_i,
-                                  recrystalized_grain_volume,
+                                  recrystalized_grain_size,
                                   recrystalized_fractions,
                                   bulk_piezometer,
                                   strain_energy,
