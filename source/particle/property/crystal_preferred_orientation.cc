@@ -1558,11 +1558,13 @@ namespace aspect
             const double chi_dif = strain_rate_dif/total;
             set_strain_difference(cpo_index,data,mineral_i,grain_i,chi_dif);
            
-            diffusion_strain_rate[grain_i] = chi_dif * strain_rate;
-            dislocation_strain_rate[grain_i] = strain_rate - diffusion_strain_rate[grain_i];
+            //diffusion_strain_rate[grain_i] = chi_dif * strain_rate;
+            //dislocation_strain_rate[grain_i] = strain_rate - diffusion_strain_rate[grain_i];
 
-            diffusion_velocity_gradient[grain_i] = diffusion_strain_rate[grain_i];
-            dislocation_velocity_gradient[grain_i] = velocity_gradient_tensor - diffusion_velocity_gradient[grain_i];
+            //diffusion_velocity_gradient[grain_i] = diffusion_strain_rate[grain_i];
+            //dislocation_velocity_gradient[grain_i] = velocity_gradient_tensor - diffusion_velocity_gradient[grain_i];
+            dislocation_velocity_gradient[grain_i] = velocity_gradient_tensor;
+            dislocation_strain_rate[grain_i] = strain_rate;
           }
           else
           {
@@ -1816,7 +1818,8 @@ namespace aspect
           {
             if ((t!= 0)&&(get_volume_fractions_grains(cpo_index,data,mineral_i,grain_i)>0.))
           {
-            recrystalized_grain_size[grain_i] = A[mineral_i] * std::pow(differential_stress/1e6,m[mineral_i]);
+            recrystalized_grain_size[grain_i] = A[mineral_i] * std::pow(diff_stress[grain_i]/1e6,m[mineral_i]);
+            std::cout<<"for grain "<<grain_i<<" differential stress = "<<diff_stress[grain_i]<<std::endl;
           }
         else
           {
