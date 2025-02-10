@@ -275,10 +275,7 @@ namespace aspect
                                      const std::array<double,4> ref_resolved_shear_stress,
                                      const SymmetricTensor<2,3> &deviatoric_stress,
                                      const SymmetricTensor<2,dim> &deviatoric_strain_rate,
-                                     const std::vector<double> &volume_fractions,
-                                     const std::vector<double> &diffusion_pre_strain_rates,
-                                     const std::vector<double> &diffusion_grain_size_exponent,
-                                     const std::vector<double> &dislocation_strain_rates)const;
+                                     const std::vector<double> &volume_fractions)const;
 
           void
           recrystalize_grains(const unsigned int cpo_index,

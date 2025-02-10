@@ -991,10 +991,7 @@ namespace aspect
                                                 ref_resolved_shear_stress,
                                                 stress_3d,
                                                 deviatoric_strain_rate,
-                                                volume_fractions,
-                                                diffusion_pre_strain_rates,
-                                                diffusion_grain_size_exponent,
-                                                dislocation_strain_rates);
+                                                volume_fractions);
               break;
             }
             default:
@@ -1425,10 +1422,7 @@ namespace aspect
                                                                    const std::array<double,4> ref_resolved_shear_stress,
                                                                    const SymmetricTensor<2,3> &deviatoric_stress,
                                                                    const SymmetricTensor<2,dim> &deviatoric_strain_rate,
-                                                                   const std::vector<double> &volume_fractions,
-                                                                   const std::vector<double> &diffusion_pre_strain_rates,
-                                                                   const std::vector<double> &diffusion_grain_size_exponent,
-                                                                   const std::vector<double> &dislocation_strain_rates) const
+                                                                   const std::vector<double> &volume_fractions) const
       {
         // create output variables
         std::vector<double> deriv_volume_fractions(n_grains);
@@ -1458,10 +1452,6 @@ namespace aspect
         std::vector<std::array<double,4>> schmid_factor(n_grains);
         std::vector<double> rho_scale(n_grains);
         std::vector<double> diff_stress(n_grains);
-        std::vector<SymmetricTensor<2,3>> diffusion_strain_rate(n_grains);
-        std::vector<SymmetricTensor<2,3>> dislocation_strain_rate(n_grains);
-        std::vector<Tensor<2,3>> diffusion_velocity_gradient(n_grains);
-        std::vector<Tensor<2,3>> dislocation_velocity_gradient(n_grains);
 
         // Calculation of the differential stress
         const std::array< double, 3 > eigenvalues = dealii::eigenvalues(strain_rate);
@@ -1497,86 +1487,6 @@ namespace aspect
         const double activation_volume_dif = 6.* std::pow(10,-6);
         const double activation_volume_dis = 1.4 * std::pow(10,-5);
     
-        /*
-        // Rheology
-        // Divvying up the strain rate tensor and velocity gradient tensor into diffusion and dislocation creep
-        for (unsigned int grain_i = 0; grain_i < n_grains; ++grain_i)
-          {
-            if ((get_volume_fractions_grains(cpo_index,data, mineral_i, grain_i) > 0.0) && (this->get_time() != 0))
-              {
-                const double grain_size = get_volume_fractions_grains(cpo_index,data,mineral_i,grain_i);
-                const double diffusion_prefactor = MaterialModel::MaterialUtilities::average_value(volume_fractions, diffusion_pre_strain_rates, MaterialModel::MaterialUtilities::harmonic);
-                const double diffusion_exponent = MaterialModel::MaterialUtilities::average_value(volume_fractions,  diffusion_grain_size_exponent, MaterialModel::MaterialUtilities::harmonic);
-                const double dislocation_prefactor = MaterialModel::MaterialUtilities::average_value(volume_fractions,  dislocation_strain_rates, MaterialModel::MaterialUtilities::harmonic);
-
-                // Calculating diffusion creep strain rate
-                const double dif_strr = (diffusion_prefactor * differential_stress * std::pow(grain_size, -1*diffusion_exponent));
-                const double chi_diff = (dif_strr/std::sqrt(std::max(-second_invariant(strain_rate), 0.)));
-                diffusion_strain_rate[grain_i] = chi_diff* strain_rate;
-                dislocation_strain_rate[grain_i] = strain_rate - diffusion_strain_rate[grain_i];
-                set_strain_difference(cpo_index,data,mineral_i,grain_i,chi_diff);
-                //std::cout<<"diff ratio for grain "<<grain_i<<" = "<<(diffusion_prefactor * differential_stress * std::pow(get_volume_fractions_grains(cpo_index,data,mineral_i,grain_i), -1*diffusion_exponent))<<std::endl;
-                //set_dis_invariant(cpo_index,data,mineral_i,grain_i, std::sqrt(std::max(-second_invariant(dislocation_strain_rate[grain_i]), 0.)));
-                //set_dif_invariant(cpo_index,data,mineral_i,grain_i, std::sqrt(std::max(-second_invariant(diffusion_strain_rate[grain_i]), 0.)));
-
-                // Calculating velocity gradient tensor for different mechansims
-                diffusion_velocity_gradient[grain_i] = diffusion_strain_rate[grain_i];
-                dislocation_velocity_gradient[grain_i] = velocity_gradient_tensor - diffusion_velocity_gradient[grain_i];
-
-
-                // dislocation_strain_rate[grain_i] = strain_rate;
-                //dislocation_velocity_gradient[grain_i] = velocity_gradient_tensor;
-              }
-            else
-              {
-                diffusion_strain_rate[grain_i] = 0.;
-                dislocation_strain_rate[grain_i] = 0.;
-
-                rho_scale[grain_i] = 0.;
-                //set_dis_invariant(cpo_index,data,mineral_i,grain_i, 0.);
-                //set_dif_invariant(cpo_index,data,mineral_i,grain_i, 0.);
-
-                // Calculating velocity gradient tensors
-                diffusion_velocity_gradient[grain_i] = 0.;
-                dislocation_velocity_gradient[grain_i] = 0.;
-              }
-          }
-        */
-        
-         // Calculating chi_diff
-        for(unsigned int grain_i = 0; grain_i < n_grains; ++grain_i)
-        {
-          if((get_volume_fractions_grains(cpo_index,data,mineral_i,grain_i) > 0.) && (this->get_time() !=0))
-          {
-            
-            const double grain_size = get_volume_fractions_grains(cpo_index,data,mineral_i,grain_i);
-            const double strain_rate_dif = pre_exponential_dif * differential_stress * std::pow(grain_size,-1*exponent_grain_size) * exp(-1 *(activation_energy_dif + (pressure * activation_volume_dif))/(constants::gas_constant * temperature));
-            const double strain_rate_dis = pre_exponential_dis * std::pow(differential_stress,exponent_dis) * exp(-1 *(activation_energy_dis + (pressure * activation_volume_dis))/(constants::gas_constant * temperature));
-            
-            const double total = strain_rate_dif + strain_rate_dis;
-           //const double chi_dif = strain_rate_dif/std::sqrt(std::max(-second_invariant(strain_rate), 0.));
-            const double chi_dif = strain_rate_dif/total;
-            set_strain_difference(cpo_index,data,mineral_i,grain_i,chi_dif);
-           
-            //diffusion_strain_rate[grain_i] = chi_dif * strain_rate;
-            //dislocation_strain_rate[grain_i] = strain_rate - diffusion_strain_rate[grain_i];
-
-            //diffusion_velocity_gradient[grain_i] = diffusion_strain_rate[grain_i];
-            //dislocation_velocity_gradient[grain_i] = velocity_gradient_tensor - diffusion_velocity_gradient[grain_i];
-            dislocation_velocity_gradient[grain_i] = velocity_gradient_tensor;
-            dislocation_strain_rate[grain_i] = strain_rate;
-          }
-          else
-          {
-            diffusion_strain_rate[grain_i] = 0.;
-            dislocation_strain_rate[grain_i] = 0.;
-
-            diffusion_velocity_gradient[grain_i] = 0.;
-            dislocation_velocity_gradient[grain_i] = 0.;
-            set_strain_difference(cpo_index,data,mineral_i,grain_i,0.);;
-          }
-        }
-
         // first compute the amount of slip, G, strain accumulated and dislocation density for n_grains, as long as grain is initialized, i.e grain size is not equal to 0
         for (unsigned int grain_i = 0; grain_i < n_grains; ++grain_i)
           {
@@ -1603,7 +1513,7 @@ namespace aspect
                 const Tensor<1,3> slip_direction_global = rotation_matrix_transposed*slip_direction_reference[slip_system_i];
                 const Tensor<2,3> slip_cross_product =(outer_product(slip_direction_global,slip_normal_global));
                 global_slip_system[grain_i][slip_system_i] = slip_cross_product;
-                bigI[slip_system_i] = scalar_product(slip_cross_product,dislocation_strain_rate[grain_i]);
+                bigI[slip_system_i] = scalar_product(slip_cross_product,strain_rate);
               }
 
             // The value in this if statement is arbitrary. Has to be further checked out to for a more "realistic value".
@@ -1684,12 +1594,12 @@ namespace aspect
                     // from the EPSL paper, which says gamma_nu depends on i+1
                     const unsigned int i_offset = (i==0) ? (i+2) : (i-1);
 
-                    top = top - (dislocation_velocity_gradient[grain_i][i][i_offset]-dislocation_velocity_gradient[grain_i][i_offset][i])*(schmidt_tensor[i][i_offset]-schmidt_tensor[i_offset][i]);
+                    top = top - (velocity_gradient_tensor[i][i_offset]-velocity_gradient_tensor[i_offset][i])*(schmidt_tensor[i][i_offset]-schmidt_tensor[i_offset][i]);
                     bottom = bottom - (schmidt_tensor[i][i_offset]-schmidt_tensor[i_offset][i])*(schmidt_tensor[i][i_offset]-schmidt_tensor[i_offset][i]);
 
                     for (unsigned int j = 0; j < 3; ++j)
                       {
-                        top = top + 2.0 * schmidt_tensor[i][j]*dislocation_velocity_gradient[grain_i][i][j];
+                        top = top + 2.0 * schmidt_tensor[i][j]*velocity_gradient_tensor[i][j];
                         bottom = bottom + 2.0* schmidt_tensor[i][j] * schmidt_tensor[i][j];
                       }
                   }
@@ -1702,9 +1612,9 @@ namespace aspect
                 spin_vectors[grain_i] = Tensor<1,3>
                                         (
                 {
-                  0.5*(dislocation_velocity_gradient[grain_i][2][1]-dislocation_velocity_gradient[grain_i][1][2]) - 0.5*(schmidt_tensor[2][1]-schmidt_tensor[1][2]) *gamma,
-                  0.5*(dislocation_velocity_gradient[grain_i][0][2]-dislocation_velocity_gradient[grain_i][2][0]) - 0.5*(schmidt_tensor[0][2]-schmidt_tensor[2][0]) *gamma,
-                  0.5*(dislocation_velocity_gradient[grain_i][1][0]-dislocation_velocity_gradient[grain_i][0][1]) - 0.5*(schmidt_tensor[1][0]-schmidt_tensor[0][1]) *gamma
+                  0.5*(velocity_gradient_tensor[2][1]-velocity_gradient_tensor[1][2]) - 0.5*(schmidt_tensor[2][1]-schmidt_tensor[1][2]) *gamma,
+                  0.5*(velocity_gradient_tensor[0][2]-velocity_gradient_tensor[2][0]) - 0.5*(schmidt_tensor[0][2]-schmidt_tensor[2][0]) *gamma,
+                  0.5*(velocity_gradient_tensor[1][0]-velocity_gradient_tensor[0][1]) - 0.5*(schmidt_tensor[1][0]-schmidt_tensor[0][1]) *gamma
                 });
 
                 // Calculate the amount of strain accumulated by dislocation glide.
@@ -1746,7 +1656,7 @@ namespace aspect
                         const Tensor<1,3> slip_direction_global = rotation_matrix_transposed*slip_direction_reference[slip_system_i];
                         const Tensor<2,3> slip_cross_product = outer_product(slip_direction_global,slip_normal_global);
 
-                        const double non_dimensionalization = std::sqrt(std::max(-second_invariant(dislocation_strain_rate[grain_i]), 0.));
+                        const double non_dimensionalization = std::sqrt(std::max(-second_invariant(strain_rate), 0.));
                         const double e_s = scalar_product(slip_cross_product,strrate);
 
                         std::vector<double> ref(volume_fractions.size(), std::numeric_limits<double>::quiet_NaN());
