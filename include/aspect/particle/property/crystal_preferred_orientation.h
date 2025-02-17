@@ -283,7 +283,6 @@ namespace aspect
                               const unsigned int mineral_i,
                               const std::vector<double> &recrystalized_grainsize,
                               const std::vector<double> &recrystalized_fraction,
-                              const double bulk_piezometer,
                               std::vector<double> &strain_energy,
                               std::vector<bool> &rx_now) const;
 
@@ -769,7 +768,7 @@ namespace aspect
           * @param grain_i The grain to get the value of the volume fraction of.
           */
           inline
-          int get_slip_rate(const unsigned int cpo_data_position,
+          double get_slip_rate(const unsigned int cpo_data_position,
                             const ArrayView<const double> &data,
                             const unsigned int mineral_i,
                             const unsigned int grain_i) const
@@ -791,7 +790,7 @@ namespace aspect
                              const ArrayView<double> &data,
                              const unsigned int mineral_i,
                              const unsigned int grain_i,
-                             const int slip_rate) const
+                             const double slip_rate) const
           {
             data[cpo_data_position + 22 + grain_i * 26 + mineral_i * (n_grains * 26 + 2)] = slip_rate;
           }
