@@ -736,6 +736,12 @@ namespace aspect
 
               for (unsigned int grain_i = 0; grain_i < n_grains; ++grain_i)
                 {
+                   const std::array<double,4> dd = get_dislocation_density(cpo_index,data,mineral_i,grain_i);
+                   double ssd;
+                   for (unsigned int slip_system_i = 0; slip_system_i <4; ++slip_system_i)
+                    {
+                      ssd += dd[slip_system_i];
+                    }
                   // Do the volume fraction of the grain
                   double vf_old = get_volume_fractions_grains(cpo_index,data,mineral_i,grain_i);
                   double vf_new = get_volume_fractions_grains(cpo_index,data,mineral_i,grain_i);
@@ -757,7 +763,7 @@ namespace aspect
 
                       Assert(vf_new >= 0,ExcMessage("volume_fractions[grain_i] is less than zero. grain_i = "
                                                     + std::to_string(grain_i) + ", volume_fractions[grain_i] = " + std::to_string(get_volume_fractions_grains(cpo_index,data,mineral_i,grain_i))
-                                                    + ", derivatives.first[grain_i] = " + std::to_string(derivatives.first[grain_i])));
+                                                    + ", derivatives.first[grain_i] = " + std::to_string(derivatives.first[grain_i]) + "grain status  = " + std::to_string(get_grain_status(cpo_index,data,mineral_i,grain_i))));
                       if (std::fabs(vf_new-vf_old) < property_advection_tolerance)
                         {
                           break;
