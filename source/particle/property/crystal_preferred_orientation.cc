@@ -756,14 +756,16 @@ namespace aspect
                         vf_new = get_volume_fractions_grains(cpo_index,data,mineral_i,grain_i) + dt * (((4./3.) * numbers::PI * std::pow(vf_new* 0.5,3))/sum_of_volumes) * derivatives.first[grain_i];
                       else
                         vf_new = vf_new;
-
+                      
+                      const double strr = get_slip_rate(cpo_index,data,mineral_i,grain_i);
                       Assert(std::isfinite(get_volume_fractions_grains(cpo_index,data,mineral_i,grain_i)),ExcMessage("volume_fractions[grain_i] is not finite. grain_i = "
                              + std::to_string(grain_i) + ", volume_fractions[grain_i] = " + std::to_string(get_volume_fractions_grains(cpo_index,data,mineral_i,grain_i))
                              + ", derivatives.first[grain_i] = " + std::to_string(derivatives.first[grain_i])));
 
                       Assert(vf_new >= 0,ExcMessage("volume_fractions[grain_i] is less than zero. grain_i = "
                                                     + std::to_string(grain_i) + ", volume_fractions[grain_i] = " + std::to_string(get_volume_fractions_grains(cpo_index,data,mineral_i,grain_i))
-                                                    + ", derivatives.first[grain_i] = " + std::to_string(derivatives.first[grain_i]) + "grain status  = " + std::to_string(get_grain_status(cpo_index,data,mineral_i,grain_i))));
+                                                    + ", derivatives.first[grain_i] = " + std::to_string(derivatives.first[grain_i]) + "grain status  = " + std::to_string(get_grain_status(cpo_index,data,mineral_i,grain_i))
+                                                   +  "strain accumulated = " + std::to_string(get_strain_accumulated(cpo_index,data,mineral_i,grain_i)) + "strain rate = " + std::to_string(strr)));
                       if (std::fabs(vf_new-vf_old) < property_advection_tolerance)
                         {
                           break;
@@ -1686,8 +1688,12 @@ namespace aspect
 
                         const double rhos = rho_ref * std::pow(tau[indices[slip_system_i]],exponent_p-stress_exponent) *
                                             std::pow(std::abs(e_s/non_dimensionalization),exponent_p/stress_exponent);
-
+                        
+                        strain_energy[grain_i] += 0.5 * shear_modulus * burgers_vector * burgers_vector * rhos;
                         dislocation_density[slip_system_i] = rhos;
+
+                        if((grain_i >85 ) && (grain_i <90))
+                          std::cout<<"for grain "<<grain_i<<" dislocation density along slip system "<<slip_system_i<<" = "<<rhos<<" and resolved shear strain rate = "<<e_s<<" and reference dislocation density = "<<rho_ref<<std::endl;
 
                         Assert(isfinite(strain_energy[grain_i]), ExcMessage("strain_energy[" + std::to_string(grain_i) + "] is not finite: " + std::to_string(strain_energy[grain_i])
                                                                             + ", rhos (" + std::to_string(slip_system_i) + ") = " + std::to_string(rhos)
@@ -1695,6 +1701,7 @@ namespace aspect
                       }
                     set_dislocation_density(cpo_index,data,mineral_i,grain_i,dislocation_density);
                   }
+                  set_strain_energy(cpo_index,data,mineral_i,grain_i,strain_energy[grain_i]);
               }
 
           }
@@ -1790,21 +1797,7 @@ namespace aspect
           }
         const double mean_grain_size = sum_grain/nnz;
 
-        for (unsigned int grain_i = 0; grain_i <n_grains; ++grain_i)
-          {
-            const std::array<double,4> dd = get_dislocation_density(cpo_index,data,mineral_i,grain_i);
-            double ssd;
-            for (unsigned int slip_system_i = 0; slip_system_i <4; ++slip_system_i)
-              {
-                ssd += dd[slip_system_i];
-              }
-
-            if (get_volume_fractions_grains(cpo_index,data,mineral_i,grain_i) > 0.)
-              {
-                strain_energy[grain_i] = 0.5 *  ssd * burgers_vector* burgers_vector * shear_modulus;
-              }
-            set_strain_energy(cpo_index,data,mineral_i,grain_i,strain_energy[grain_i]);
-          }
+   
 
 
         double mean_strain_energy = 0.0;
@@ -1842,8 +1835,8 @@ namespace aspect
             if ((get_volume_fractions_grains(cpo_index,data,mineral_i,grain_i) != 0.0))
               {
                 // Different than D-Rex. Here we actually only compute the derivative and do not multiply it with the volume_fractions. We do that when we advect.
-                const double driving_force = (mean_strain_energy - strain_energy[grain_i]) - (interfacial_energy*((2./get_volume_fractions_grains(cpo_index,data,mineral_i,grain_i)) - (2./mean_grain_size)));
-                set_surface_energy(cpo_index,data,mineral_i,grain_i,(interfacial_energy*((2./get_volume_fractions_grains(cpo_index,data,mineral_i,grain_i)) - (2./mean_grain_size))));
+                const double driving_force = (mean_strain_energy - strain_energy[grain_i]) + (interfacial_energy*( (2./mean_grain_size)));
+                set_surface_energy(cpo_index,data,mineral_i,grain_i,(interfacial_energy*((2./get_volume_fractions_grains(cpo_index,data,mineral_i,grain_i)))));
                 deriv_volume_fractions[grain_i] = get_volume_fraction_mineral(cpo_index,data,mineral_i) *  drexpp_mobility[mineral_i] * driving_force;
                 set_grain_boundary_velocity(cpo_index,data,mineral_i,grain_i,deriv_volume_fractions[grain_i]);
               }
