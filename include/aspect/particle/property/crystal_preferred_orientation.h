@@ -231,6 +231,7 @@ namespace aspect
                               const SymmetricTensor<2,3> &strain_rate_3d,
                               const Tensor<2,3> &velocity_gradient_tensor,
                               const Point<dim> &position,
+                              const typename DoFHandler<dim>::active_cell_iterator &cell,
                               const double temperature,
                               const double pressure,
                               const Tensor<1,dim> &velocity,
@@ -340,6 +341,7 @@ namespace aspect
           DeformationType
           determine_deformation_type(const DeformationTypeSelector deformation_type_selector,
                                      const Point<dim> &position,
+                                     const typename DoFHandler<dim>::active_cell_iterator &cell,
                                      const double temperature,
                                      const double pressure,
                                      const Tensor<1,dim> &velocity,
