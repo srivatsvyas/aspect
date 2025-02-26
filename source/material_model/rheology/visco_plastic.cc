@@ -177,7 +177,7 @@ namespace aspect
                 = (viscous_flow_law != dislocation
                    ?
                    diffusion_creep.compute_viscosity(pressure_for_creep, temperature_for_viscosity, j,
-                    grain_size,
+                                                     grain_size,
                                                      phase_function_values,
                                                      n_phase_transitions_per_composition)
                    :
