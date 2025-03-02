@@ -335,6 +335,13 @@ namespace aspect
                                               << "mineral_" << write_raw_cpo[property_i].first << "_slip_system_4" << " ";
                     break;
 
+                  case Output::RelativeActivity:
+                    string_stream_content_raw << "mineral_" << write_raw_cpo[property_i].first << "_slip_system_1" << " "
+                                              << "mineral_" << write_raw_cpo[property_i].first << "_slip_system_2" << " "
+                                              << "mineral_" << write_raw_cpo[property_i].first << "_slip_system_3" << " "
+                                              << "mineral_" << write_raw_cpo[property_i].first << "_slip_system_4" << " ";
+                    break;
+
                   default:
                     Assert(false, ExcMessage("Internal error: raw CPO postprocess case not found."));
                     break;
@@ -431,6 +438,13 @@ namespace aspect
                     break;
                   
                   case Output::ResolvedShearStrr:
+                    string_stream_content_draw_volume_weighting << "mineral_" << write_draw_volume_weighted_cpo[property_i].first << "_slip_system_1" << " "
+                                                                << "mineral_" << write_draw_volume_weighted_cpo[property_i].first << "_slip_system_2" << " "
+                                                                << "mineral_" << write_draw_volume_weighted_cpo[property_i].first << "_slip_system_3" << " "
+                                                                << "mineral_" << write_draw_volume_weighted_cpo[property_i].first << "_slip_system_4" << " ";
+                    break;
+
+                  case Output::RelativeActivity:
                     string_stream_content_draw_volume_weighting << "mineral_" << write_draw_volume_weighted_cpo[property_i].first << "_slip_system_1" << " "
                                                                 << "mineral_" << write_draw_volume_weighted_cpo[property_i].first << "_slip_system_2" << " "
                                                                 << "mineral_" << write_draw_volume_weighted_cpo[property_i].first << "_slip_system_3" << " "
@@ -664,6 +678,21 @@ string_stream_content_raw  <<   dislocation_density[0] << " "
 break;
 
                           }
+
+                          case Output::RelativeActivity:
+                          {
+                            const std::array<double,4>relative_activity = cpo_particle_property.get_relative_activity(cpo_data_position,
+                              properties,
+                              write_raw_cpo[property_i].first,
+                              grain);
+
+string_stream_content_raw  <<   relative_activity[0] << " "
+<<   relative_activity[1] << " "
+<<   relative_activity[2] << " "
+<<   relative_activity[3] << " ";
+break;
+
+                          }
                             
                           default:
                             Assert(false, ExcMessage("Internal error: raw CPO postprocess case not found."));
@@ -859,6 +888,21 @@ string_stream_content_draw_volume_weighting  <<   dislocation_density[0] << " "
 break;
 
                             }
+                          
+                          case Output::RelativeActivity:
+                            {
+                              const std::array<double,4>relative_activity = cpo_particle_property.get_relative_activity(cpo_data_position,
+                                properties,
+                                write_raw_cpo[property_i].first,
+                                grain);
+
+string_stream_content_draw_volume_weighting  <<   relative_activity[0] << " "
+<<   relative_activity[1] << " "
+<<   relative_activity[2] << " "
+<<   relative_activity[3] << " ";
+break;
+
+                            }
                             
                             default:
                             Assert(false, ExcMessage("Internal error: raw CPO postprocess case not found."));
@@ -1014,7 +1058,10 @@ break;
         return Output::DislocationDensity;
       if (string == "Resolved shear strain rate")
         return Output::ResolvedShearStrr;  
-      else
+      if (string == "Relative activity")
+        return Output::RelativeActivity;
+      
+        else
         return Output::not_found;
     }
 
