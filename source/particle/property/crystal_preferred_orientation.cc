@@ -1355,7 +1355,7 @@ namespace aspect
            // Compute the Schmidt tensor for this grain (nu) and the resolved shear strain rate along slip system s, s is the slip system
            std::array<Tensor<1,3>,4> slip_normal_reference {{Tensor<1,3>({0,1,0}),Tensor<1,3>({0,0,1}),Tensor<1,3>({0,1,0}),Tensor<1,3>({1,0,0})}};
            std::array<Tensor<1,3>,4> slip_direction_reference {{Tensor<1,3>({1,0,0}),Tensor<1,3>({1,0,0}),Tensor<1,3>({0,0,1}),Tensor<1,3>({0,0,1})}};
-
+            
            Tensor<1,4> bigI;
            for(unsigned int slip_system_i = 0; slip_system_i < 4; ++slip_system_i)
            {
@@ -1403,11 +1403,16 @@ namespace aspect
 
              for (unsigned int slip_system_i = 1; slip_system_i < 4-1; ++slip_system_i)
                {
-                  beta[indices[slip_system_i]] = std::pow(std::abs(ratio * (bigI[indices[slip_system_i]]/tau[indices[slip_system_i]])), drexpp_stress_exponent[mineral_i]);
-                  relative_activity[slip_system_i] = beta[indices[slip_system_i]];
+                  beta[indices[slip_system_i]] = std::pow(std::abs(ratio * (bigI[indices[slip_system_i]]/tau[indices[slip_system_i]])), drexpp_stress_exponent[mineral_i]);   
                }
              beta[indices.back()] = 0.0;
-
+            
+             for (unsigned int slip_system_i = 0; slip_system_i < 4; ++slip_system_i)
+               {
+                  relative_activity[slip_system_i] = beta[slip_system_i];   
+               }
+               
+             set_active_slip_system(cpo_index,data,mineral_i,grain_i,indices[0]);
              set_relative_activity(cpo_index,data,mineral_i,grain_i,relative_activity);
              
              Tensor<2,3> schmidt_tensor; // comment- This is not the schmidt tensor. The symmetric part of the slip cross product calculated is the actual schmidt tensor.
