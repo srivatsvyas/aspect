@@ -1233,7 +1233,7 @@ namespace aspect
           std::vector<double> drexpp_mobility;
           double interfacial_energy;
           double avrami_slope_input;
-
+          double initial_dislocation_density;
           
 
       };
