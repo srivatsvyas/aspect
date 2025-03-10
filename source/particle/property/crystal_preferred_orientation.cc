@@ -1185,10 +1185,7 @@ namespace aspect
                 
                 set_rx_fractions(cpo_index,data,mineral_i,grain_i,unrx_portion);
                 set_volume_fractions_grains(cpo_index,data,mineral_i,grain_i,left_over_grain_size);
-                if((grain_i == 2)&& (mineral_i == 0))
-                {
-                  std::cout<<"\ngrain size post rx = "<<left_over_grain_size<<std::endl;
-                }
+                
 
                 if(permutation_vector.size() >= n_recrystalized_grains)
                   {
