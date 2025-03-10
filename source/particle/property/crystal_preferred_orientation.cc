@@ -726,13 +726,13 @@ namespace aspect
           }
           case CPODerivativeAlgorithm::drexpp:
             {
-              double sum_of_volumes = 0;
+              double area_sum = 0;
               double sum_volume_fractions = 0;
               Tensor<2,3> cosine_ref;
 
               for (unsigned int grain_i = 0; grain_i < n_grains; ++grain_i)
                 {
-                  sum_of_volumes += (4./3.) * numbers::PI * std::pow(get_volume_fractions_grains(cpo_index,data,mineral_i,grain_i)* 0.5,3);
+                  area_sum += numbers::PI * std::pow(get_volume_fractions_grains(cpo_index,data,mineral_i,grain_i)* 0.5,2.);
                 }
 
               for (unsigned int grain_i = 0; grain_i < n_grains; ++grain_i)
@@ -748,11 +748,11 @@ namespace aspect
                                                               + ", derivatives.first[grain_i] = " + std::to_string(derivatives.first[grain_i])));
 
                       if (this ->get_time() !=0)
-                        vf_new = get_volume_fractions_grains(cpo_index,data,mineral_i,grain_i) + dt * (((4./3.) * numbers::PI * std::pow(vf_new* 0.5,3))/sum_of_volumes) * derivatives.first[grain_i];
+                        vf_new = get_volume_fractions_grains(cpo_index,data,mineral_i,grain_i) + dt * (( numbers::PI * std::pow(vf_new* 0.5,2.))/area_sum) * derivatives.first[grain_i];
                       else
                         vf_new = vf_new;
                       
-                      set_grain_size_change(cpo_index,data,mineral_i,grain_i,dt * (((4./3.) * numbers::PI * std::pow(vf_new* 0.5,3))/sum_of_volumes) * derivatives.first[grain_i]);
+                      set_grain_size_change(cpo_index,data,mineral_i,grain_i, dt * (( numbers::PI * std::pow(vf_new* 0.5,2.))/area_sum) * derivatives.first[grain_i]);
                       Assert(std::isfinite(get_volume_fractions_grains(cpo_index,data,mineral_i,grain_i)),ExcMessage("volume_fractions[grain_i] is not finite. grain_i = "
                              + std::to_string(grain_i) + ", volume_fractions[grain_i] = " + std::to_string(get_volume_fractions_grains(cpo_index,data,mineral_i,grain_i))
                              + ", derivatives.first[grain_i] = " + std::to_string(derivatives.first[grain_i])));
@@ -1145,23 +1145,23 @@ namespace aspect
 
             const double grain_size = get_volume_fractions_grains(cpo_index,data,mineral_i,grain_i);
            
-            const double volume =  numbers::PI * std::pow(grain_size * 0.5 , 2.0);
-            const double rx_volume =  numbers::PI * std::pow(piezometer[grain_i] * 0.5 , 2.0);
+            const double area =  numbers::PI * std::pow(grain_size * 0.5 , 2.0);
+            const double rx_area =  numbers::PI * std::pow(piezometer[grain_i] * 0.5 , 2.0);
 
             Tensor<2,3> rotation_matrix ;
             int n_recrystalized_grains; 
             double replaced_grain_volume;
 
-            if((volume >= 2. * rx_volume)&&(piezometer[grain_i] > 0.))
+            if((area >= 2. * rx_area)&&(piezometer[grain_i] > 0.))
               {
-                n_recrystalized_grains = (std::floor(recrystalized_fraction[grain_i] * (volume/rx_volume)));
+                n_recrystalized_grains = (std::floor(recrystalized_fraction[grain_i] * (area/rx_area)));
                
               }
             else
                 n_recrystalized_grains =0;
             
             
-            double left_overs = volume - (n_recrystalized_grains * rx_volume);
+            double left_overs = area - (n_recrystalized_grains * rx_area);
             
             double left_over_grain_size = 2.0 * std::pow((left_overs *  (1.0/numbers::PI)),(1.0/2.0));
             
@@ -1170,7 +1170,7 @@ namespace aspect
                 if(left_over_grain_size < piezometer[grain_i])
                   {
                     n_recrystalized_grains += -1;
-                    left_overs = volume - (n_recrystalized_grains * rx_volume);
+                    left_overs = area - (n_recrystalized_grains * rx_area);
                     left_over_grain_size = 2.0 * std::pow((left_overs * (1.0/numbers::PI)),(1.0/2.0));
                   }
                   
@@ -1180,8 +1180,8 @@ namespace aspect
                 set_n_rx_grains(cpo_index,data,mineral_i,grain_i,n_recrystalized_grains);
                 
                 double unrx_portion;
-                if(volume != 0.)
-                   unrx_portion = (volume -(n_recrystalized_grains * rx_volume)/volume)*recrystalized_fraction[grain_i];
+                if(area != 0.)
+                   unrx_portion = (area -(n_recrystalized_grains * rx_area)/area)*recrystalized_fraction[grain_i];
                 
                 set_rx_fractions(cpo_index,data,mineral_i,grain_i,unrx_portion);
                 set_volume_fractions_grains(cpo_index,data,mineral_i,grain_i,left_over_grain_size);
@@ -1232,22 +1232,22 @@ namespace aspect
                        }
                        
                        double replaced_grain_size;
-                       double replaced_volume;
+                       double replaced_grain_area;
 
                        for (unsigned int recrystalize_grain_i = 0; recrystalize_grain_i <= n_recrystalized_grains; ++recrystalize_grain_i)
                           {
-                             replaced_grain_volume += numbers::PI * std::pow(0.5 * get_volume_fractions_grains(cpo_index,data,mineral_i,buffer_vector[buffer_vector_counter+recrystalize_grain_i]),2.0);
+                             replaced_grain_area += numbers::PI * std::pow(0.5 * get_volume_fractions_grains(cpo_index,data,mineral_i,buffer_vector[buffer_vector_counter+recrystalize_grain_i]),2.0);
                              set_volume_fractions_grains(cpo_index,data,mineral_i,buffer_vector[buffer_vector_counter+recrystalize_grain_i],0.);
                           }
                        
-                      if(replaced_grain_volume > 2 * rx_volume)
+                      if(replaced_grain_area > 2 * rx_area)
                          {
-                            replaced_grain_volume = 2 * rx_volume;
+                            replaced_grain_area = 2 * rx_area;
                          }     
                     
                       if(replaced_grain_volume > 0.0)
                         { 
-                          set_volume_fractions_grains(cpo_index,data,mineral_i,buffer_vector[buffer_vector_counter],2.0 *std::pow((replaced_grain_volume/numbers::PI),1./2.));
+                          set_volume_fractions_grains(cpo_index,data,mineral_i,buffer_vector[buffer_vector_counter],2.0 *std::pow((replaced_grain_area/numbers::PI),1./2.));
                           this->compute_random_rotation_matrix(rotation_matrix);
                           set_rotation_matrix_grains(cpo_index,data,mineral_i,buffer_vector[buffer_vector_counter],rotation_matrix * parent_orientation * transpose(rotation_matrix));            
                           set_grain_status(cpo_index,data,mineral_i,buffer_vector[buffer_vector_counter],3);
@@ -1399,7 +1399,7 @@ namespace aspect
              Assert(bigI[indices[0]] != 0.0, ExcMessage("Internal error: bigI is zero."));
              beta[indices[0]] = 1.0; // max q_abs, weak system (most deformation) "s=1"
              const double ratio = tau[indices[0]]/bigI[indices[0]];
-             std::array<double,4> relative_activity;
+            
 
              for (unsigned int slip_system_i = 1; slip_system_i < 4-1; ++slip_system_i)
                {
@@ -1407,13 +1407,8 @@ namespace aspect
                }
              beta[indices.back()] = 0.0;
             
-             for (unsigned int slip_system_i = 0; slip_system_i < 4; ++slip_system_i)
-               {
-                  relative_activity[slip_system_i] = beta[slip_system_i];   
-               }
-               
              set_active_slip_system(cpo_index,data,mineral_i,grain_i,indices[0]);
-             set_relative_activity(cpo_index,data,mineral_i,grain_i,relative_activity);
+
              
              Tensor<2,3> schmidt_tensor; // comment- This is not the schmidt tensor. The symmetric part of the slip cross product calculated is the actual schmidt tensor.
              
@@ -1492,7 +1487,8 @@ namespace aspect
                 
                 double differential_stress;
                 std::array<double,4> resolved_strain_rate;
-
+                std::array<double,4> strain_accumulated;
+                strain_accumulated = get_relative_activity(cpo_index,data,mineral_i,grain_i);
                 for (unsigned int slip_system_i = 0; slip_system_i < 4; ++slip_system_i)
                   {
                     const Tensor<1,3> slip_normal_global = rotation_matrix_transposed*slip_normal_reference[slip_system_i];
@@ -1501,14 +1497,18 @@ namespace aspect
 
                     const double e_s = scalar_product(slip_cross_product,d);
                     resolved_strain_rate[slip_system_i] = e_s;
-                    const double rhos = rho_scale * std::pow(tau[indices[slip_system_i]],drexpp_exponent_p[mineral_i]-stress_exponent) *
-                                                    std::pow(std::abs(e_s/non_dimensionalization),drexpp_exponent_p[mineral_i]/stress_exponent);
+                    //strain_accumulated[slip_system_i] +=  std::abs(e_s * this->get_timestep());
+                    double rhos = rho_scale * std::pow(tau[indices[slip_system_i]],drexpp_exponent_p[mineral_i]-stress_exponent) *
+                                                    std::pow(std::abs((beta[slip_system_i] * gamma)/non_dimensionalization),drexpp_exponent_p[mineral_i]/stress_exponent);
 
+                    rhos = rhos * ( 1.0 - (0.7 / tau[indices[slip_system_i]]));
+                    strain_accumulated[slip_system_i]= rhos;
                     dislocation_density[grain_i] += rhos;
                     strain_energy[grain_i] += 0.5 *  rhos * burgers_vector* burgers_vector * shear_modulus;
                   }
+                set_relative_activity(cpo_index,data,mineral_i,grain_i,strain_accumulated);
                 set_slip_activity(cpo_index,data,mineral_i,grain_i,resolved_strain_rate);
-                set_differential_stress(cpo_index,data,mineral_i,grain_i,0.5 * shear_modulus * burgers_vector * std::pow(get_dislocation_density(cpo_index,data,mineral_i,grain_i),0.5));
+                set_differential_stress(cpo_index,data,mineral_i,grain_i,ref_stress);
                 set_dislocation_density(cpo_index,data,mineral_i,grain_i,dislocation_density[grain_i]);
                 set_strain_energy(cpo_index,data,mineral_i,grain_i,strain_energy[grain_i]);
               }
@@ -1521,7 +1521,7 @@ namespace aspect
           {
             if ((get_volume_fractions_grains(cpo_index,data,mineral_i,grain_i) > 0.) && (get_strain_accumulated(cpo_index,data,mineral_i,grain_i) >= 0.25))
               {
-                piezometer[grain_i] = A[mineral_i] * std::pow(0.5 * shear_modulus * burgers_vector * std::pow(get_dislocation_density(cpo_index,data,mineral_i,grain_i),0.5)/1e6,m[mineral_i]);
+                piezometer[grain_i] = A[mineral_i] * std::pow(get_differential_stress(cpo_index,data,mineral_i,grain_i)/1e6,m[mineral_i]);
                 recrystalized_fractions[grain_i] = get_rx_fractions(cpo_index,data,mineral_i,grain_i);
                 if(strain_accumulated[grain_i] - 0.25 < strain_increment[grain_i])
                 {
@@ -1552,7 +1552,7 @@ namespace aspect
         
         // Calculating mean strain energy
         double mean_strain_energy = 0.0;
-        double sum_volume = 0. ;
+        double sum_area = 0. ;
 
         for (unsigned int grain_i = 0; grain_i<n_grains; ++grain_i)
           {
@@ -1561,15 +1561,15 @@ namespace aspect
                 const double grain_size = get_volume_fractions_grains(cpo_index,data,mineral_i,grain_i);
                 if ((get_volume_fractions_grains(cpo_index,data,mineral_i,grain_i) > 0.) && (rx_now[grain_i] == false))
                 {
-                  const double volume = (4./3.) * numbers::PI * std::pow(0.5 * grain_size,3.);
-                  sum_volume += volume;
-                  mean_strain_energy += (volume * strain_energy[grain_i]);
+                  const double area = numbers::PI * std::pow(0.5 * grain_size,2.);
+                  sum_area += area;
+                  mean_strain_energy += (area * strain_energy[grain_i]);
                 }
               }
           }
 
-        if (sum_volume !=0. )
-          mean_strain_energy = mean_strain_energy/sum_volume;
+        if (sum_area !=0. )
+          mean_strain_energy = mean_strain_energy/sum_area;
         Assert(isfinite(mean_strain_energy), ExcMessage("mean_strain_energy is not finite: " + std::to_string(mean_strain_energy) + "."));
 
         for (unsigned int grain_i = 0; grain_i < n_grains; ++grain_i)
@@ -1713,8 +1713,8 @@ namespace aspect
             // Becker et al., 2007 (http://www-udc.ig.utexas.edu/external/becker/preprints/bke07.pdf)
             case DeformationType::olivine_a_fabric :
               ref_resolved_shear_stress[0] = 1;
-              ref_resolved_shear_stress[1] = 2;
-              ref_resolved_shear_stress[2] = 3;
+              ref_resolved_shear_stress[1] = 1.4;
+              ref_resolved_shear_stress[2] = 4;
               ref_resolved_shear_stress[3] = max_value;
               break;
 
