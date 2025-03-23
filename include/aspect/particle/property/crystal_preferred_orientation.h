@@ -264,6 +264,7 @@ namespace aspect
                               const unsigned int mineral_i,
                               const std::vector<double> &recrystalized_fraction,
                               const std::vector<double> &piezometer,
+                              const std::vector<Tensor<1,3>> &sgr_rotation_axis,
                               std::vector<bool> &rx_now) const;
 
           /**
