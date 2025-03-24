@@ -103,7 +103,7 @@ namespace aspect
        */
       enum class CPOInitialGrainsModel
       {
-        uniform_grains_and_random_uniform_rotations, world_builder
+        uniform_grains_and_random_uniform_rotations, world_builder,pre_existing_fabric
       };
 
       /**
@@ -1232,6 +1232,7 @@ namespace aspect
           std::vector<double> drexpp_exponent_p;
           std::vector<double> drexpp_stress_exponent;
           std::vector<double> drexpp_mobility;
+          std::string input_orientation_file;
           double interfacial_energy;
           double avrami_slope_input;
           double initial_dislocation_density;

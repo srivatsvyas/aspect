@@ -232,25 +232,67 @@ namespace aspect
               { 
                 if(cpo_derivative_algorithm == CPODerivativeAlgorithm::drexpp)
                 {
+                  std::vector<std::array<double,3>>orientations;
+                  if (initial_grains_model == CPOInitialGrainsModel::pre_existing_fabric)
+                     {
+                      std::ifstream file(input_orientation_file);
+                      if (!file)
+                       {
+                        std::cerr << "Error: Unable to open file!\n";
+                        assert(false && "File parsing error");
+                       }
+    
+                     
+                      double phi1, phi2, phi3;
+                      std::string line;
+    
+                      while (std::getline(file, line)) 
+                      { // Read file line by line
+                        std::istringstream iss(line);
+                        if (!(iss >> phi1 >> phi2 >> phi3))
+                        { // Parse three space-separated values
+                            std::cerr << "Error: Failed to parse line: " << line << std::endl;
+                            assert(false && "File parsing error");
+                        }
+                        orientations.push_back({phi1, phi2, phi3});
+                        std::cout<<phi1<<"\t"<<phi2<<"\t"<<phi3<<"\n";
+                      }
+    
+                      file.close();  
+                     }
+
                   for(unsigned int grain_i = 0; grain_i < n_grains; ++grain_i)
                   {
+                    Tensor<2,3> dcmg;
                     if(grain_i < n_grains_init)
                     {
                       volume_fractions_grains[mineral_i][grain_i] = initial_grain_size;
                       grain_status[mineral_i][grain_i]= 0;
+                      if(initial_grains_model == CPOInitialGrainsModel::pre_existing_fabric)
+                      {
+                        //std::cout<<orientations[grain_i][0]<<"\t"<<orientations[grain_i][1]<<"\t"<<orientations[grain_i][2]<<"\n";
+                        dcmg =  aspect::Utilities::zxz_euler_angles_to_rotation_matrix(orientations[grain_i][0], orientations[grain_i][1], orientations[grain_i][2]);
+                        rotation_matrices_grains[mineral_i][grain_i] = dcmg;
+                      }
+                      else
+                      {
+                        this->compute_random_rotation_matrix(rotation_matrices_grains[mineral_i][grain_i]);
+                      }
                     }
                     else
                     if(grain_i >= n_grains - n_grains_buffer)
                     {
                       volume_fractions_grains[mineral_i][grain_i] = 0.;
                       grain_status[mineral_i][grain_i] = -2;
+                      this->compute_random_rotation_matrix(rotation_matrices_grains[mineral_i][grain_i]);
                     }
                     else
                     { 
                       volume_fractions_grains[mineral_i][grain_i] = 0.;
                       grain_status[mineral_i][grain_i] = -1;
-                    }
                       this->compute_random_rotation_matrix(rotation_matrices_grains[mineral_i][grain_i]);
+                    }
+                      //this->compute_random_rotation_matrix(rotation_matrices_grains[mineral_i][grain_i]);
                       strain_accumulated[mineral_i][grain_i] = 0.;
                       rx_fractions[mineral_i][grain_i] = 0.;
                       active_slip_system[mineral_i][grain_i] = 0;
@@ -1884,6 +1926,11 @@ namespace aspect
                               Patterns::Anything(),
                               "The model used to initialize the CPO for all particles. "
                               "Currently 'Uniform grains and random uniform rotations' and 'World Builder' are the only valid option.");
+            
+            prm.declare_entry("Input file with initial orientations","initial_orientations.dat",
+                                Patterns::Anything(),
+                                "The model used to initialize the CPO for all particles. "
+                                "Currently 'Uniform grains and random uniform rotations' and 'World Builder' are the only valid option.");
 
             prm.declare_entry ("Minerals", "Olivine: Karato 2008, Enstatite",
                                Patterns::List(Patterns::Anything()),
@@ -2049,6 +2096,11 @@ namespace aspect
             else if (model_name == "World Builder")
               {
                 initial_grains_model = CPOInitialGrainsModel::world_builder;
+              }
+            else if (model_name == "Pre-existing fabric")
+              {
+                initial_grains_model = CPOInitialGrainsModel::pre_existing_fabric;
+                input_orientation_file = prm.get("Input file with initial orientations");        
               }
             else
               {
