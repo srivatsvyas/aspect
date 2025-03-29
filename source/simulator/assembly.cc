@@ -945,13 +945,11 @@ namespace aspect
 
     if (advection_field.is_temperature())
       scratch.material_model_inputs.requested_properties
-        = MaterialModel::MaterialProperties::equation_of_state_properties |
+        =
+          MaterialModel::MaterialProperties::equation_of_state_properties |
+          MaterialModel::MaterialProperties::additional_outputs |
+          MaterialModel::MaterialProperties::viscosity |
           MaterialModel::MaterialProperties::thermal_conductivity;
-
-    if (parameters.include_melt_transport)
-      scratch.material_model_inputs.requested_properties
-        = scratch.material_model_inputs.requested_properties |
-          MaterialModel::MaterialProperties::additional_outputs;
 
     for (const auto &heating_model : heating_model_manager.get_active_plugins())
       scratch.material_model_inputs.requested_properties
