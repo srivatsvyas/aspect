@@ -318,14 +318,51 @@ namespace aspect
                 {
                   // set volume fraction
                   const double initial_volume_fraction = 1.0/n_grains;
+                  Tensor<2,3> dcmg;
+                  std::vector<std::array<double,3>>orientations;
+                  if (initial_grains_model == CPOInitialGrainsModel::pre_existing_fabric)
+                     {
+                      std::ifstream file(input_orientation_file);
+                      if (!file)
+                       {
+                        std::cerr << "Error: Unable to open file!\n";
+                        assert(false && "File parsing error");
+                       }
+    
+                     
+                      double phi1, phi2, phi3;
+                      std::string line;
+    
+                      while (std::getline(file, line)) 
+                      { // Read file line by line
+                        std::istringstream iss(line);
+                        if (!(iss >> phi1 >> phi2 >> phi3))
+                        { // Parse three space-separated values
+                            std::cerr << "Error: Failed to parse line: " << line << std::endl;
+                            assert(false && "File parsing error");
+                        }
+                        orientations.push_back({phi1, phi2, phi3});
+                        std::cout<<phi1<<"\t"<<phi2<<"\t"<<phi3<<"\n";
+                      }
+    
+                      file.close();  
+                     }
 
                   for (unsigned int grain_i = 0; grain_i < n_grains ; ++grain_i)
                     {
                       // set volume fraction
                       volume_fractions_grains[mineral_i][grain_i] = initial_volume_fraction;
-
-                      // set a uniform random rotation_matrix per grain
-                      this->compute_random_rotation_matrix(rotation_matrices_grains[mineral_i][grain_i]);
+                      if(initial_grains_model == CPOInitialGrainsModel::pre_existing_fabric)
+                      {
+                        //std::cout<<orientations[grain_i][0]<<"\t"<<orientations[grain_i][1]<<"\t"<<orientations[grain_i][2]<<"\n";
+                        dcmg =  aspect::Utilities::zxz_euler_angles_to_rotation_matrix(orientations[grain_i][0], orientations[grain_i][1], orientations[grain_i][2]);
+                        rotation_matrices_grains[mineral_i][grain_i] = dcmg;
+                      }
+                      else
+                      {
+                        this->compute_random_rotation_matrix(rotation_matrices_grains[mineral_i][grain_i]);
+                      }
+                      
                       grain_status[mineral_i][grain_i] = 0;
                       strain_accumulated[mineral_i][grain_i] = 0.;
                       rx_fractions[mineral_i][grain_i] = 0.;
@@ -557,14 +594,23 @@ namespace aspect
                       }
 
                     rotation_matrix = dealii::project_onto_orthogonal_tensors(rotation_matrix);
-                    set_rotation_matrix_grains(data_position,data,mineral_i,grain_i,rotation_matrix);
-                    for (size_t i = 0; i < 3; ++i)
+                    
+                    for (size_t i = 0; i < 3; ++i){
                       for (size_t j = 0; j < 3; ++j)
                         {
                           // I don't think this should happen with the projection, but D-Rex
                           // does not do the orthogonal projection, but just clamps the values
                           // to 1 and -1.
-                          
+                          if(rotation_matrix[i][j] >= 1.0)
+                          {
+                            rotation_matrix[i][j] = 1.0;
+                          }
+
+                          if(rotation_matrix[i][j] <= -1.0)
+                          {
+                            rotation_matrix[i][j] = -1.0;
+                          }
+
                           Assert(std::fabs(rotation_matrix[i][j]) <= 1.0,
                                  ExcMessage("The rotation_matrix has a entry larger than 1."));
 
@@ -580,8 +626,8 @@ namespace aspect
                                             + std::to_string(rotation_matrix[1][0]) + " " + std::to_string(rotation_matrix[1][1]) + " " + std::to_string(rotation_matrix[1][2]) + "\n"
                                             + std::to_string(rotation_matrix[2][0]) + " " + std::to_string(rotation_matrix[2][1]) + " " + std::to_string(rotation_matrix[2][2])));
                         }
-                     
-                        
+                      }
+                        set_rotation_matrix_grains(data_position,data,mineral_i,grain_i,rotation_matrix);
                   }
               }
             ++p;
@@ -1239,7 +1285,7 @@ namespace aspect
                 set_rx_fractions(cpo_index,data,mineral_i,grain_i,unrx_portion);
                 set_volume_fractions_grains(cpo_index,data,mineral_i,grain_i,left_over_grain_size);
                 
-                boost::random::uniform_real_distribution<double> uniform_distribution1(-numbers::PI/18,numbers::PI/18);
+                boost::random::uniform_real_distribution<double> uniform_distribution1(-1.0 * numbers::PI/18,numbers::PI/18);
                 double random_angle = uniform_distribution1(this->random_number_generator);
                 rotation_matrix = Utilities::rotation_matrix_from_axis(sgr_rotation_axis[grain_i],random_angle);
                 
@@ -1352,7 +1398,7 @@ namespace aspect
                                                                       ) const
       {
         // time variables - timestep/time/time increment
-
+        std::cout<<"strain rate = "<<std::sqrt(std::max(-second_invariant(strain_rate), 0.))<<std::endl; 
         const double t =this-> get_time();
         const double timestep =this-> get_timestep();
                  
@@ -1560,7 +1606,9 @@ namespace aspect
              // Note tau = RRSS = (tau_m^s/tau_o), this why we get tau^(p-n)
             if (get_volume_fractions_grains(cpo_index,data,mineral_i,grain_i) > 0.)
               {
-                
+               
+                //const std::array< double, 3 > eigenvalues = dealii::eigenvalues(strain_rate);
+                //const double nondimensionalization_value = std::max(std::abs(eigenvalues[0]),std::abs(eigenvalues[2]));
                 const double non_dimensionalization = std::sqrt(std::max(-second_invariant(strain_rate), 0.));                
                 double rho_scale;
                 const double ref_stress = std::pow(non_dimensionalization/(pre_exponential_dis * exp(-1. * (activation_energy_dis + (activation_volume_dis * pressure))/(constants::gas_constant * temperature))),1./3.5);
@@ -1583,10 +1631,10 @@ namespace aspect
                     double rhos = rho_scale * std::pow(tau[slip_system_i],stress_exponent - drexpp_exponent_p[mineral_i]) *
                                                     std::pow(std::abs((beta[slip_system_i] * gamma)/non_dimensionalization),drexpp_exponent_p[mineral_i]/stress_exponent);
 
-                    if(get_strain_accumulated(cpo_index,data,mineral_i,grain_i) <= 3.0)  
-                      rhos = rhos * ( get_strain_accumulated(cpo_index,data,mineral_i,grain_i)/3.0);
-                    else
-                      rhos = rhos;
+                    //if(get_strain_accumulated(cpo_index,data,mineral_i,grain_i) <= 3.0)  
+                    //  rhos = rhos * ( get_strain_accumulated(cpo_index,data,mineral_i,grain_i)/3.0);
+                    //else
+                    //  rhos = rhos;
 
                     //strain_accumulated[slip_system_i]= rhos;
                     dislocation_density[grain_i] += rhos;
