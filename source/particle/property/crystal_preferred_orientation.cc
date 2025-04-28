@@ -836,8 +836,24 @@ namespace aspect
                                                               + std::to_string(grain_i) + ", volume_fractions[grain_i] = " + std::to_string(get_volume_fractions_grains(cpo_index,data,mineral_i,grain_i))
                                                               + ", derivatives.first[grain_i] = " + std::to_string(derivatives.first[grain_i])));
 
+                      //if ((this ->get_time() !=0) && (std::abs(dt * (( numbers::PI * std::pow(vf_new* 0.5,2.))/area_sum) * derivatives.first[grain_i]) <= 25 * std::pow(10,-6)))
                       if (this ->get_time() !=0)
-                        vf_new = get_volume_fractions_grains(cpo_index,data,mineral_i,grain_i) + dt * (( numbers::PI * std::pow(vf_new* 0.5,2.))/area_sum) * derivatives.first[grain_i];
+                      {
+                        if(std::abs(dt * (( numbers::PI * std::pow(vf_new* 0.5,2.))/area_sum) * derivatives.first[grain_i]) <= 50 * std::pow(10,-6))  
+                          vf_new = get_volume_fractions_grains(cpo_index,data,mineral_i,grain_i) + dt * (( numbers::PI * std::pow(vf_new* 0.5,2.))/area_sum) * derivatives.first[grain_i];
+                        else
+                          if((dt * (( numbers::PI * std::pow(vf_new* 0.5,2.))/area_sum) * derivatives.first[grain_i]) < 0)
+                          {
+                            vf_new = get_volume_fractions_grains(cpo_index,data,mineral_i,grain_i) - (0.1 * std::pow(10,-6));
+                            break;
+                          }
+                          else 
+                          if((dt * (( numbers::PI * std::pow(vf_new* 0.5,2.))/area_sum) * derivatives.first[grain_i]) > 0)
+                          {
+                            vf_new = get_volume_fractions_grains(cpo_index,data,mineral_i,grain_i) + (0.1 * std::pow(10,-6));
+                            break;
+                          }
+                      }
                       else
                         vf_new = vf_new;
                       
@@ -1467,7 +1483,7 @@ namespace aspect
            // Compute the Schmidt tensor for this grain (nu) and the resolved shear strain rate along slip system s, s is the slip system
            std::array<Tensor<1,3>,4> slip_normal_reference {{Tensor<1,3>({0,1,0}),Tensor<1,3>({0,0,1}),Tensor<1,3>({0,1,0}),Tensor<1,3>({1,0,0})}};
            std::array<Tensor<1,3>,4> slip_direction_reference {{Tensor<1,3>({1,0,0}),Tensor<1,3>({1,0,0}),Tensor<1,3>({0,0,1}),Tensor<1,3>({0,0,1})}};
-            
+           std::array<Tensor<1,3>,4> rx_reference {{Tensor<1,3>({0,0,1}),Tensor<1,3>({0,1,0}),Tensor<1,3>({1,0,0}),Tensor<1,3>({0,1,0})}}; 
            Tensor<1,4> bigI;
            for(unsigned int slip_system_i = 0; slip_system_i < 4; ++slip_system_i)
            {
@@ -1513,8 +1529,14 @@ namespace aspect
              Assert(bigI[indices[0]] != 0.0, ExcMessage("Internal error: bigI is zero."));
              beta[indices[0]] = 1.0; // max q_abs, weak system (most deformation) "s=1"
 
+             Tensor<1,3> rx_slip_normal = slip_normal_reference[indices[0]];
+             Tensor<1,3> rx_slip_direction = slip_direction_reference[indices[0]];
+            
+             Tensor<3,1> rx_axis;
+
+             // Calculating the cross product of the slip normal and slip direction to get the axis of rotation
              
-             //sgr_rotation_axis[grain_i] = transpose(get_rotation_matrix_grains(cpo_index,data,mineral_i,grain_i)) * slip_direction_reference[indices[0]];
+             sgr_rotation_axis[grain_i] = transpose(get_rotation_matrix_grains(cpo_index,data,mineral_i,grain_i)) *  rx_reference[indices[0]];
 
              const double ratio = tau[indices[0]]/bigI[indices[0]];
             
@@ -1614,7 +1636,7 @@ namespace aspect
                 const double ref_stress = std::pow(non_dimensionalization/(pre_exponential_dis * exp(-1. * (activation_energy_dis + (activation_volume_dis * pressure))/(constants::gas_constant * temperature))),1./3.5);
                
                 rho_scale = std::pow(ref_stress /(0.5 * shear_modulus * burgers_vector),drexpp_exponent_p[mineral_i]);
-                
+                //std::cout<<"differential stress = "<<ref_stress<<"\t rho_scale = "<<rho_scale<<"\n";
                 double differential_stress;
                 std::array<double,4> resolved_strain_rate;
                 std::array<double,4> strain_accumulated;
@@ -1627,6 +1649,7 @@ namespace aspect
 
                     const double e_s = scalar_product(slip_cross_product,d);
                     resolved_strain_rate[slip_system_i] = e_s;
+                    
                     //strain_accumulated[slip_system_i] +=  std::abs(e_s * this->get_timestep());
                     double rhos = rho_scale * std::pow(tau[slip_system_i],stress_exponent - drexpp_exponent_p[mineral_i]) *
                                                     std::pow(std::abs((beta[slip_system_i] * gamma)/non_dimensionalization),drexpp_exponent_p[mineral_i]/stress_exponent);
@@ -1674,7 +1697,11 @@ namespace aspect
               }
             set_rx_fractions(cpo_index,data,mineral_i,grain_i,recrystalized_fractions[grain_i]);
           }
-
+        if(ref_stress != 0.0)
+        {
+          std::cout<<"piezometer = "<<A[mineral_i] * std::pow(ref_stress/1e6,m[mineral_i])<<"\t differential stress = "<<ref_stress<<std::endl;
+        
+        }
         // Calling the rx module to carry out dynamic recrystalization        
         this->recrystalize_grains(cpo_index,
                                   data,
