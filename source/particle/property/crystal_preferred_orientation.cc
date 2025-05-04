@@ -155,6 +155,7 @@ namespace aspect
         // The rotation matrix is a direction cosine matrix, representing the orientation of the grain in the domain.
         // The fabric is determined later in the computations, so initialize it to -1.
         std::vector<double> deformation_type(n_minerals, -1.0);
+        std::vector<double> volume_fraction_minerals(n_minerals, -1.0);
         std::vector<double> piezometer(n_minerals, -1.0);
         std::vector<std::vector<double >>volume_fractions_grains(n_minerals);
         std::vector<std::vector<Tensor<2,3>>> rotation_matrices_grains(n_minerals);
@@ -833,7 +834,7 @@ namespace aspect
 
               for (unsigned int grain_i = 0; grain_i < n_grains; ++grain_i)
                 {
-                  std::cout<<"grain size of grian "<<grain_i<<" = "<<get_volume_fractions_grains(cpo_index,data,mineral_i,grain_i)<<std::endl;
+                  std::cout<<"grain size of grain "<<grain_i<<" = "<<get_volume_fractions_grains(cpo_index,data,mineral_i,grain_i)<<"\t position = "<<cpo_index + 3 + grain_i * 32 + mineral_i * (n_grains * 32 + 2)<<std::endl;
                   area_sum += numbers::PI * std::pow(get_volume_fractions_grains(cpo_index,data,mineral_i,grain_i)* 0.5,2.);
                 }
 
@@ -1472,8 +1473,6 @@ namespace aspect
         const double shear_modulus = 8.0 * std::pow(10.0,10.0);
         const double burgers_vector = 5.0 * std::pow(10.0,-10.0);
 
-        const double K1 = std::pow(10,14);
-        const double K2 = 0.5;
         /*
           Because the piezometer is isotropic, I declared and created the piezometer here
         */
