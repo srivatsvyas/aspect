@@ -155,6 +155,7 @@ namespace aspect
         // The rotation matrix is a direction cosine matrix, representing the orientation of the grain in the domain.
         // The fabric is determined later in the computations, so initialize it to -1.
         std::vector<double> deformation_type(n_minerals, -1.0);
+        std::vector<double> piezometer(n_minerals);
         std::vector<std::vector<double >>volume_fractions_grains(n_minerals);
         std::vector<std::vector<Tensor<2,3>>> rotation_matrices_grains(n_minerals);
         std::vector<std::vector<int    >>grain_status(n_minerals);
@@ -232,6 +233,7 @@ namespace aspect
               { 
                 if(cpo_derivative_algorithm == CPODerivativeAlgorithm::drexpp)
                 {
+
                   std::vector<std::array<double,3>>orientations;
                   if (initial_grains_model == CPOInitialGrainsModel::pre_existing_fabric)
                      {
@@ -263,10 +265,19 @@ namespace aspect
 
                   for(unsigned int grain_i = 0; grain_i < n_grains; ++grain_i)
                   {
+                    std::lognormal_distribution<double>distribution(lognormal_mean,lognormal_std);
+                    std::default_random_engine generator;
                     Tensor<2,3> dcmg;
                     if(grain_i < n_grains_init)
                     {
-                      volume_fractions_grains[mineral_i][grain_i] = initial_grain_size;
+                      if(initial_grains_model == CPOInitialGrainsModel::lognormal_distribution_and_random_uniform_rotations)
+                      {
+                        volume_fractions_grains[mineral_i][grain_i] = distribution(generator);
+                      }
+                      else
+                      {
+                        volume_fractions_grains[mineral_i][grain_i] = initial_grain_size;
+                      }
                       grain_status[mineral_i][grain_i]= 0;
                       if(initial_grains_model == CPOInitialGrainsModel::pre_existing_fabric)
                       {
@@ -392,6 +403,7 @@ namespace aspect
           {
             data.emplace_back(deformation_type[mineral_i]);
             data.emplace_back(volume_fractions_minerals[mineral_i]);
+            data.emplace_back(piezometer[mineral_i]);
             for (unsigned int grain_i = 0; grain_i < n_grains ; ++grain_i)
               {
                 data.emplace_back(volume_fractions_grains[mineral_i][grain_i]);
@@ -677,7 +689,7 @@ namespace aspect
           {
             property_information.emplace_back("cpo mineral " + std::to_string(mineral_i) + " type",1);
             property_information.emplace_back("cpo mineral " + std::to_string(mineral_i) + " volume fraction",1);
-
+            property_information.emplace_back("cpo mineral " + std::to_string(mineral_i) + " piezometer",1);
             for (unsigned int grain_i = 0; grain_i < n_grains; ++grain_i)
               {
                 property_information.emplace_back("cpo mineral " + std::to_string(mineral_i) + " grain " + std::to_string(grain_i) + " volume fraction",1);
@@ -821,6 +833,7 @@ namespace aspect
 
               for (unsigned int grain_i = 0; grain_i < n_grains; ++grain_i)
                 {
+                  std::cout<<"grain size of grian "<<grain_i<<" = "<<get_volume_fractions_grains(cpo_index,data,mineral_i,grain_i)<<std::endl;
                   area_sum += numbers::PI * std::pow(get_volume_fractions_grains(cpo_index,data,mineral_i,grain_i)* 0.5,2.);
                 }
 
@@ -836,28 +849,40 @@ namespace aspect
                                                               + std::to_string(grain_i) + ", volume_fractions[grain_i] = " + std::to_string(get_volume_fractions_grains(cpo_index,data,mineral_i,grain_i))
                                                               + ", derivatives.first[grain_i] = " + std::to_string(derivatives.first[grain_i])));
 
-                      //if ((this ->get_time() !=0) && (std::abs(dt * (( numbers::PI * std::pow(vf_new* 0.5,2.))/area_sum) * derivatives.first[grain_i]) <= 25 * std::pow(10,-6)))
-                      if (this ->get_time() !=0)
+                      if ((this ->get_time() != 0 ) && (area_sum > 0.))
                       {
-                        if(std::abs(dt * (( numbers::PI * std::pow(vf_new* 0.5,2.))/area_sum) * derivatives.first[grain_i]) <= 50 * std::pow(10,-6))  
+                        if(std::abs(dt * (( numbers::PI * std::pow(vf_new* 0.5,2.))/area_sum) * derivatives.first[grain_i]) <= get_piezometer_mineral(cpo_index,data,mineral_i))  
+                        {
                           vf_new = get_volume_fractions_grains(cpo_index,data,mineral_i,grain_i) + dt * (( numbers::PI * std::pow(vf_new* 0.5,2.))/area_sum) * derivatives.first[grain_i];
+                          set_grain_size_change(cpo_index,data,mineral_i,grain_i, dt * (( numbers::PI * std::pow(vf_new* 0.5,2.))/area_sum) * derivatives.first[grain_i]);
+                        }
                         else
                           if((dt * (( numbers::PI * std::pow(vf_new* 0.5,2.))/area_sum) * derivatives.first[grain_i]) < 0)
                           {
-                            vf_new = get_volume_fractions_grains(cpo_index,data,mineral_i,grain_i) - (0.1 * std::pow(10,-6));
+                            vf_new = get_volume_fractions_grains(cpo_index,data,mineral_i,grain_i) - get_piezometer_mineral(cpo_index,data,mineral_i);
+                            set_grain_size_change(cpo_index,data,mineral_i,grain_i, -1.0 * get_piezometer_mineral(cpo_index,data,mineral_i));
                             break;
                           }
                           else 
                           if((dt * (( numbers::PI * std::pow(vf_new* 0.5,2.))/area_sum) * derivatives.first[grain_i]) > 0)
                           {
-                            vf_new = get_volume_fractions_grains(cpo_index,data,mineral_i,grain_i) + (0.1 * std::pow(10,-6));
+                            vf_new = get_volume_fractions_grains(cpo_index,data,mineral_i,grain_i) + get_piezometer_mineral(cpo_index,data,mineral_i);
+                            set_grain_size_change(cpo_index,data,mineral_i,grain_i, 1.0 * get_piezometer_mineral(cpo_index,data,mineral_i));
                             break;
                           }
                       }
                       else
+                      {
                         vf_new = vf_new;
+                        set_grain_size_change(cpo_index,data,mineral_i,grain_i, 0.0);
+                      }
+                        
                       
-                      set_grain_size_change(cpo_index,data,mineral_i,grain_i, dt * (( numbers::PI * std::pow(vf_new* 0.5,2.))/area_sum) * derivatives.first[grain_i]);
+                      if(vf_new < 3 * std::pow(10,-6))
+                      {
+                        vf_new = 0.0;
+                        set_grain_status(cpo_index,data,mineral_i,grain_i,-1);
+                      }
                       Assert(std::isfinite(get_volume_fractions_grains(cpo_index,data,mineral_i,grain_i)),ExcMessage("volume_fractions[grain_i] is not finite. grain_i = "
                              + std::to_string(grain_i) + ", volume_fractions[grain_i] = " + std::to_string(get_volume_fractions_grains(cpo_index,data,mineral_i,grain_i))
                              + ", derivatives.first[grain_i] = " + std::to_string(derivatives.first[grain_i])));
@@ -873,13 +898,6 @@ namespace aspect
 
                     }
                       
-                  // setting dislocation density
-                  if(get_volume_fractions_grains(cpo_index,data,mineral_i,grain_i) > 0.)
-                  {
-                  const double rho_left_over =  ((get_dislocation_density(cpo_index,data,mineral_i,grain_i) * (numbers::PI * std::pow(0.5 * get_volume_fractions_grains(cpo_index,data,mineral_i,grain_i),2.))) - (initial_dislocation_density * numbers::PI *std::pow(get_grain_size_change(cpo_index,data,mineral_i,grain_i) * 0.5 , 2.)))/(numbers::PI * std::pow(0.5 * vf_new, 2.0));
-                  //set_dislocation_density(cpo_index,data,mineral_i,grain_i,rho_left_over);
-                  }
-
                   set_volume_fractions_grains(cpo_index,data,mineral_i,grain_i,vf_new);
                   sum_volume_fractions += vf_new;
                   
@@ -903,7 +921,11 @@ namespace aspect
                   set_rotation_matrix_grains(cpo_index,data,mineral_i,grain_i,cosine_new);
 
                 }
-              Assert(sum_volume_fractions != 0, ExcMessage("The sum of all grain volume fractions of a mineral is equal to zero. This should not happen."));
+              if(get_volume_fraction_mineral(cpo_index,data,mineral_i) !=0.0)
+              {
+                Assert(sum_volume_fractions != 0, ExcMessage("The sum of all grain volume fractions of a mineral is equal to zero. This should not happen."));
+              }
+              
               return sum_volume_fractions;
               break;
             }
@@ -1672,7 +1694,16 @@ namespace aspect
 
            }
         }
-        
+        double piez;
+        if(ref_stress != 0.)
+        {
+          piez = A[mineral_i] * std::pow(ref_stress/1e6,m[mineral_i]);
+        }
+        else
+        {
+          piez = 0.0;
+        }
+        set_piezometer_mineral(cpo_index,data,mineral_i,piez);
         // Calculating rx kinetics
         for (unsigned int grain_i = 0; grain_i < n_grains; ++grain_i)
           {
@@ -1711,12 +1742,13 @@ namespace aspect
                                   sgr_rotation_axis,
                                   rx_now);
         
-        
+        std::vector<double> energy_ratio(n_grains);
         // Calculating mean strain energy
         double mean_strain_energy = 0.0;
         double sum_area = 0. ;
         double number_grains = 0;
-
+        double mean_diameter =0.0;
+        double no_g = 0.0;
         for (unsigned int grain_i = 0; grain_i<n_grains; ++grain_i)
           {
             if (this-> get_time() != 0)
@@ -1728,14 +1760,24 @@ namespace aspect
                   const double area = numbers::PI * std::pow(0.5 * grain_size,2.);
                   sum_area += area;
                   mean_strain_energy += (area * strain_energy[grain_i]);
+                  const double f_surface = (3. * interfacial_energy*((2./get_volume_fractions_grains(cpo_index,data,mineral_i,grain_i)) ));
+                  set_surface_energy(cpo_index,data,mineral_i,grain_i,f_surface);
+                  energy_ratio[grain_i] = strain_energy[grain_i]/f_surface;
+                  mean_diameter +=  grain_size;
+                  no_g += 1;
                 }
               }
           }
 
         if (sum_area !=0. )
+        {
           mean_strain_energy = mean_strain_energy/sum_area;
+          mean_diameter = mean_diameter/no_g;
+        }
+        
+        //std::cout<<"mean diameter = "<<mean_diameter<<std::endl;
 
-        std::cout<<" mean strain energy = "<<mean_strain_energy<<"\t total area taken into consideration = "<<sum_area<<std::endl;
+        //std::cout<<" mean strain energy = "<<mean_strain_energy<<"\t total area taken into consideration = "<<sum_area<<std::endl;
 
         for (unsigned int grain_i = 0; grain_i < n_grains; ++grain_i)
           {
@@ -1750,15 +1792,21 @@ namespace aspect
             double volume_fraction_grain = get_volume_fractions_grains(cpo_index,data,mineral_i,grain_i);
             if ((volume_fraction_grain != 0.0) && (rx_now[grain_i]) == false)
               {
-                const double f_surface = (3. * interfacial_energy*((2./get_volume_fractions_grains(cpo_index,data,mineral_i,grain_i)) ));
-                set_surface_energy(cpo_index,data,mineral_i,grain_i,f_surface);
-
-                const double f_strain  = (mean_strain_energy - strain_energy[grain_i]);
-                const double driving_force = f_strain + f_surface;
-                
-                // Different than D-Rex. Here we actually only compute the derivative and do not multiply it with the volume_fractions. We do that when we advect.
-                deriv_volume_fractions[grain_i] = get_volume_fraction_mineral(cpo_index,data,mineral_i) *  drexpp_mobility[mineral_i] * driving_force;                
+                if(energy_ratio[grain_i] > 1.0)
+                {
+                  const double driving_force  = (mean_strain_energy - strain_energy[grain_i]);
+                  deriv_volume_fractions[grain_i] = get_volume_fraction_mineral(cpo_index,data,mineral_i) *  drexpp_mobility[mineral_i] * driving_force;  
                 }
+                else
+                if(energy_ratio[grain_i] < 1.0)
+                {
+                  deriv_volume_fractions[grain_i] = (get_strain_rate(cpo_index,data,mineral_i,grain_i)/characteristic_strain) * (volume_fraction_grain - mean_diameter);
+                }    
+                else
+                {
+                  deriv_volume_fractions[grain_i] = 0.0;
+                }            
+              }
             else
               {
                 deriv_volume_fractions[grain_i] = 0.;
@@ -2001,7 +2049,17 @@ namespace aspect
                               Patterns::Anything(),
                               "The model used to initialize the CPO for all particles. "
                               "Currently 'Uniform grains and random uniform rotations' and 'World Builder' are the only valid option.");
-            
+      
+            prm.declare_entry("mean of the log normal distribution","0.6",
+                                Patterns::Double(0),
+                                "The model used to initialize the CPO for all particles. "
+                                "Currently 'Uniform grains and random uniform rotations' and 'World Builder' are the only valid option.");
+                                
+            prm.declare_entry("standard deviations of the log normal distribution","0.01",
+                                  Patterns::Double(0),
+                                  "The model used to initialize the CPO for all particles. "
+                                  "Currently 'Uniform grains and random uniform rotations' and 'World Builder' are the only valid option.");
+
             prm.declare_entry("Input file with initial orientations","initial_orientations.dat",
                                 Patterns::Anything(),
                                 "The model used to initialize the CPO for all particles. "
@@ -2099,7 +2157,7 @@ namespace aspect
                                    Patterns::List(Patterns::Double(0)),
                                    "This is intial grain size we choose to prescribe to Drex ++ ");
                 
-                prm.declare_entry ("Initial dislocation density", "1e8",
+                prm.declare_entry ("characteristic strain", "0.4",
                                     Patterns::List(Patterns::Double(0)),
                                     "This is intial grain size we choose to prescribe to Drex ++ ");
           }
@@ -2164,15 +2222,22 @@ namespace aspect
           prm.enter_subsection("Initial grains");
           {
             const std::string model_name = prm.get("Model name");
+            
             if (model_name == "Uniform grains and random uniform rotations")
               {
                 initial_grains_model = CPOInitialGrainsModel::uniform_grains_and_random_uniform_rotations;
               }
+            else if (model_name == "Grains with log normal distribution and random uniform orientations")
+              {
+                initial_grains_model = CPOInitialGrainsModel::lognormal_distribution_and_random_uniform_rotations;
+                lognormal_mean = prm.get_double("mean of the log normal distribution");
+                lognormal_std = prm.get_double("mean of the log normal standard deviation");
+              }  
             else if (model_name == "World Builder")
               {
                 initial_grains_model = CPOInitialGrainsModel::world_builder;
               }
-            else if (model_name == "Pre-existing fabric")
+            else if (model_name == "Pre-existing fabric with equant grain sizes")
               {
                 initial_grains_model = CPOInitialGrainsModel::pre_existing_fabric;
                 input_orientation_file = prm.get("Input file with initial orientations");        
@@ -2266,7 +2331,7 @@ namespace aspect
                 avrami_slope_input = prm.get_double("Avrami Slope Input");
                 interfacial_energy = prm.get_double("Interfacial Energy");
                 initial_grain_size = prm.get_double("Initial grain size");
-                initial_dislocation_density = prm.get_double("Initial dislocation density");
+                characteristic_strain = prm.get_double("characteristic strain");
               }
           prm.leave_subsection();
         
