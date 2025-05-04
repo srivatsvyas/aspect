@@ -906,7 +906,7 @@ namespace aspect
                                             const unsigned int grain_i,
                                             const double pre_rx_size) const
            {
-             data[cpo_data_position + 24 + grain_i * 32 + mineral_i * (n_grains * 32 + 2)] = pre_rx_size;
+             data[cpo_data_position + 23 + grain_i * 32 + mineral_i * (n_grains * 32 + 2)] = pre_rx_size;
            }
           
           /**
@@ -925,7 +925,7 @@ namespace aspect
                                               const unsigned int mineral_i,
                                               const unsigned int grain_i) const
            {
-             return data[cpo_data_position + 25 + grain_i * 32 + mineral_i * (n_grains * 32 + 2)];
+             return data[cpo_data_position + 24 + grain_i * 32 + mineral_i * (n_grains * 32 + 2)];
            }
  
            /**
@@ -944,7 +944,7 @@ namespace aspect
                                             const unsigned int grain_i,
                                             const double post_rx_size) const
            {
-             data[cpo_data_position + 25 + grain_i * 32 + mineral_i * (n_grains * 32 + 2)] = post_rx_size;
+             data[cpo_data_position + 24 + grain_i * 32 + mineral_i * (n_grains * 32 + 2)] = post_rx_size;
            }
 
            /**
@@ -963,7 +963,7 @@ namespace aspect
                                               const unsigned int mineral_i,
                                               const unsigned int grain_i) const
            {
-             return data[cpo_data_position + 26 + grain_i * 32 + mineral_i * (n_grains * 32 + 2)];
+             return data[cpo_data_position + 25 + grain_i * 32 + mineral_i * (n_grains * 32 + 2)];
            }
  
            /**
@@ -982,7 +982,7 @@ namespace aspect
                                             const unsigned int grain_i,
                                             const double grain_size_change) const
            {
-             data[cpo_data_position + 26 + grain_i * 32 + mineral_i * (n_grains * 32 + 2)] = grain_size_change;
+             data[cpo_data_position + 25 + grain_i * 32 + mineral_i * (n_grains * 32 + 2)] = grain_size_change;
            }
 
           
@@ -992,7 +992,7 @@ namespace aspect
                                               const unsigned int mineral_i,
                                               const unsigned int grain_i) const
            {
-             return data[cpo_data_position + 27 + grain_i * 32 + mineral_i * (n_grains * 32 + 2)];
+             return data[cpo_data_position + 26 + grain_i * 32 + mineral_i * (n_grains * 32 + 2)];
            }
  
            /**
@@ -1011,7 +1011,7 @@ namespace aspect
                                             const unsigned int grain_i,
                                             const double dislocation_density) const
            {
-             data[cpo_data_position + 27 + grain_i * 32 + mineral_i * (n_grains * 32 + 2)] = dislocation_density;
+             data[cpo_data_position + 26 + grain_i * 32 + mineral_i * (n_grains * 32 + 2)] = dislocation_density;
            }
           
            inline
@@ -1024,7 +1024,7 @@ namespace aspect
             std::array<double, 4>slip_activity;
             for (unsigned int i = 0; i < 4; ++i)
               {
-                slip_activity[i] =  data[cpo_data_position + 28 + grain_i * 32 + mineral_i * (n_grains * 32 + 2) + i];
+                slip_activity[i] =  data[cpo_data_position + 27 + grain_i * 32 + mineral_i * (n_grains * 32 + 2) + i];
               }
             return slip_activity;
            }
@@ -1047,7 +1047,7 @@ namespace aspect
            {
             for (unsigned int slip_system_i = 0; slip_system_i < 4; ++slip_system_i)
             {
-              data[cpo_data_position + 28 + grain_i * 32 + mineral_i * (n_grains * 32 + 2) +slip_system_i] = slip_activity[slip_system_i];
+              data[cpo_data_position + 27 + grain_i * 32 + mineral_i * (n_grains * 32 + 2) +slip_system_i] = slip_activity[slip_system_i];
             }
            }
           

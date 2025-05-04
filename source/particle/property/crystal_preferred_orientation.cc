@@ -155,7 +155,7 @@ namespace aspect
         // The rotation matrix is a direction cosine matrix, representing the orientation of the grain in the domain.
         // The fabric is determined later in the computations, so initialize it to -1.
         std::vector<double> deformation_type(n_minerals, -1.0);
-        std::vector<double> piezometer(n_minerals);
+        std::vector<double> piezometer(n_minerals, -1.0);
         std::vector<std::vector<double >>volume_fractions_grains(n_minerals);
         std::vector<std::vector<Tensor<2,3>>> rotation_matrices_grains(n_minerals);
         std::vector<std::vector<int    >>grain_status(n_minerals);
