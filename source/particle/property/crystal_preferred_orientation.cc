@@ -1727,11 +1727,7 @@ namespace aspect
               }
             set_rx_fractions(cpo_index,data,mineral_i,grain_i,recrystalized_fractions[grain_i]);
           }
-        if(ref_stress != 0.0)
-        {
-          std::cout<<"piezometer = "<<A[mineral_i] * std::pow(ref_stress/1e6,m[mineral_i])<<"\t differential stress = "<<ref_stress<<std::endl;
         
-        }
         // Calling the rx module to carry out dynamic recrystalization        
         this->recrystalize_grains(cpo_index,
                                   data,
@@ -1799,7 +1795,7 @@ namespace aspect
                 else
                 if(energy_ratio[grain_i] < 1.0)
                 {
-                  deriv_volume_fractions[grain_i] = (get_strain_rate(cpo_index,data,mineral_i,grain_i)/characteristic_strain) * (volume_fraction_grain - mean_diameter);
+                  deriv_volume_fractions[grain_i] = (1.0/this->get_timestep()) * (volume_fraction_grain - mean_diameter);
                 }    
                 else
                 {
