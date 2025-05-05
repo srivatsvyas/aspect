@@ -25,13 +25,13 @@
 #include <aspect/simulator_access.h>
 #include <array>
 
-/* //Commented_lines
+ //Commented_lines
 #include <aspect/material_model/rheology/diffusion_creep.h>   //Commented_lines
 #include <aspect/material_model/rheology/dislocation_creep.h> //Commented_lines
 #include <aspect/material_model/rheology/visco_plastic.h>     //Commented_lines
 #include <aspect/material_model/utilities.h>                  //Commented_lines
 #include <aspect/material_model/interface.h>                  //Commented_lines
-*/
+
 
 DEAL_II_DISABLE_EXTRA_DIAGNOSTICS
 #include <boost/random.hpp>
@@ -1158,6 +1158,29 @@ namespace aspect
           std::vector<double> drexpp_mobility;
           double interfacial_energy;
           double avrami_slope_input;
+
+          std::unique_ptr<MaterialModel::Rheology::DiffusionCreep<dim>> rheology_diff;
+          std::unique_ptr<MaterialModel::Rheology::DislocationCreep<dim>> rheology_disl;
+          std::unique_ptr<MaterialModel::Rheology::ViscoPlastic<dim>> rheology_vipl;
+
+          double min_strain_rate;
+          std::vector<double> thermal_diffusivities;
+
+
+          /**
+           * Whether to use user-defined thermal conductivities instead of thermal diffusivities.
+           */
+          bool define_conductivities;
+
+          std::vector<double> thermal_conductivities;
+
+          /**
+           * Object that handles phase transitions.
+           */
+          MaterialModel::MaterialUtilities::PhaseFunction<dim> phase_function;
+          /** @} */
+
+          
 
           
 
