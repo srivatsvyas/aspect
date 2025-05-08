@@ -266,14 +266,18 @@ namespace aspect
 
                   for(unsigned int grain_i = 0; grain_i < n_grains; ++grain_i)
                   {
-                    std::lognormal_distribution<double>distribution(lognormal_mean,lognormal_std);
-                    std::default_random_engine generator;
+                    
                     Tensor<2,3> dcmg;
                     if(grain_i < n_grains_init)
                     {
                       if(initial_grains_model == CPOInitialGrainsModel::lognormal_distribution_and_random_uniform_rotations)
                       {
-                        volume_fractions_grains[mineral_i][grain_i] = distribution(generator);
+                        std::normal_distribution<double>distribution(lognormal_mean,lognormal_std);
+                        volume_fractions_grains[mineral_i][grain_i] = distribution(this->random_number_generator);
+                        while(volume_fractions_grains[mineral_i][grain_i] <= 0.0)
+                        {
+                          volume_fractions_grains[mineral_i][grain_i] = distribution(this->random_number_generator);
+                        }
                       }
                       else
                       {
@@ -834,7 +838,7 @@ namespace aspect
 
               for (unsigned int grain_i = 0; grain_i < n_grains; ++grain_i)
                 {
-                  std::cout<<"grain size of grain "<<grain_i<<" = "<<get_volume_fractions_grains(cpo_index,data,mineral_i,grain_i)<<"\t position = "<<cpo_index + 3 + grain_i * 32 + mineral_i * (n_grains * 32 + 2)<<std::endl;
+                  //std::cout<<"grain size of grain "<<grain_i<<" = "<<get_volume_fractions_grains(cpo_index,data,mineral_i,grain_i)<<"\t position = "<<cpo_index + 3 + grain_i * 32 + mineral_i * (n_grains * 32 + 2)<<std::endl;
                   area_sum += numbers::PI * std::pow(get_volume_fractions_grains(cpo_index,data,mineral_i,grain_i)* 0.5,2.);
                 }
 
@@ -1684,6 +1688,7 @@ namespace aspect
                     dislocation_density[grain_i] += rhos;
                     strain_energy[grain_i] += 0.5 *  rhos * burgers_vector* burgers_vector * shear_modulus;
                   }
+                  //std::cout<<"rho scale for mineral "<<mineral_i<<" = "<<rho_scale<<std::endl;
                 //set_relative_activity(cpo_index,data,mineral_i,grain_i,strain_accumulated);
                 //set_slip_activity(cpo_index,data,mineral_i,grain_i,resolved_strain_rate);
                 set_differential_stress(cpo_index,data,mineral_i,grain_i,ref_stress);
@@ -1703,6 +1708,7 @@ namespace aspect
           piez = 0.0;
         }
         set_piezometer_mineral(cpo_index,data,mineral_i,piez);
+        //std::cout<<"piezometer for mineral "<<mineral_i<<" = "<<piez<<std::endl;
         // Calculating rx kinetics
         for (unsigned int grain_i = 0; grain_i < n_grains; ++grain_i)
           {
@@ -1728,6 +1734,7 @@ namespace aspect
             set_rx_fractions(cpo_index,data,mineral_i,grain_i,recrystalized_fractions[grain_i]);
           }
         
+       
         // Calling the rx module to carry out dynamic recrystalization        
         this->recrystalize_grains(cpo_index,
                                   data,
@@ -1769,10 +1776,6 @@ namespace aspect
           mean_strain_energy = mean_strain_energy/sum_area;
           mean_diameter = mean_diameter/no_g;
         }
-        
-        //std::cout<<"mean diameter = "<<mean_diameter<<std::endl;
-
-        //std::cout<<" mean strain energy = "<<mean_strain_energy<<"\t total area taken into consideration = "<<sum_area<<std::endl;
 
         for (unsigned int grain_i = 0; grain_i < n_grains; ++grain_i)
           {
@@ -1781,7 +1784,8 @@ namespace aspect
             deriv_a_cosine_matrices[grain_i] =  Utilities::Tensors::levi_civita<3>() * spin_vectors[grain_i];
             set_differential_stress(cpo_index,data,mineral_i,grain_i,mean_strain_energy);
           }
-
+        
+        //std::cout<<"piezometer = "<<get_piezometer_mineral(cpo_index,data,mineral_i)<<std::endl;
          for (unsigned int grain_i = 0; grain_i < n_grains; ++grain_i)
           {
             double volume_fraction_grain = get_volume_fractions_grains(cpo_index,data,mineral_i,grain_i);
@@ -1791,6 +1795,7 @@ namespace aspect
                 {
                   const double driving_force  = (mean_strain_energy - strain_energy[grain_i]);
                   deriv_volume_fractions[grain_i] = get_volume_fraction_mineral(cpo_index,data,mineral_i) *  drexpp_mobility[mineral_i] * driving_force;  
+                  //std::cout<<"for grain "<<grain_i<<" change in grain size = "<<deriv_volume_fractions[grain_i]<<std::endl;
                 }
                 else
                 if(energy_ratio[grain_i] < 1.0)
@@ -1806,12 +1811,11 @@ namespace aspect
               {
                 deriv_volume_fractions[grain_i] = 0.;
               }
-            
+              
               set_grain_boundary_velocity(cpo_index,data,mineral_i,grain_i,deriv_volume_fractions[grain_i]);  
           }
-
+          
         return std::pair<std::vector<double>, std::vector<Tensor<2,3>>>(deriv_volume_fractions, deriv_a_cosine_matrices);
-      
       }
 
       template <int dim>
@@ -2050,7 +2054,7 @@ namespace aspect
                                 "The model used to initialize the CPO for all particles. "
                                 "Currently 'Uniform grains and random uniform rotations' and 'World Builder' are the only valid option.");
                                 
-            prm.declare_entry("standard deviations of the log normal distribution","0.01",
+            prm.declare_entry("standard deviation of the log normal distribution","0.01",
                                   Patterns::Double(0),
                                   "The model used to initialize the CPO for all particles. "
                                   "Currently 'Uniform grains and random uniform rotations' and 'World Builder' are the only valid option.");
@@ -2226,7 +2230,7 @@ namespace aspect
               {
                 initial_grains_model = CPOInitialGrainsModel::lognormal_distribution_and_random_uniform_rotations;
                 lognormal_mean = prm.get_double("mean of the log normal distribution");
-                lognormal_std = prm.get_double("mean of the log normal standard deviation");
+                lognormal_std = prm.get_double("standard deviation of the log normal distribution");
               }  
             else if (model_name == "World Builder")
               {
