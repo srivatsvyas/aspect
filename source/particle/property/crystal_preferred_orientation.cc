@@ -795,7 +795,7 @@ namespace aspect
                       /*
                         If any grain shrinks below a certain threshold, the grain is assumed to be consumed by other growing grains and the slot is assigned a grain size of 0 and grain status of -1, allowing the slot to participate in dynamic recrystallization.
                       */ 
-                     
+
                       if(vf_new < 3 * std::pow(10,-6))
                       {
                         vf_new = 0.0;
@@ -901,7 +901,7 @@ namespace aspect
             }
             case CPODerivativeAlgorithm::drexpp:
             {
-
+              const double pressure = 1.0e9; // SV - Have to make this react with the position of the particle in question
               const DeformationType deformation_type = determine_deformation_type(deformation_type_selector[mineral_i],
                                                                                   position,
                                                                                   temperature,
@@ -916,6 +916,47 @@ namespace aspect
 
               const std::array<double,4> ref_resolved_shear_stress = reference_resolved_shear_stress_from_deformation_type(deformation_type);
               
+              // now compute the normal viscosity to be able to computes the stress
+              // Create the material model inputs and outputs to
+              // retrieve the current viscosity.
+
+              MaterialModel::MaterialModelInputs<dim> in = MaterialModel::MaterialModelInputs<dim>(1,compositions.size());
+              in.pressure[0] = pressure;
+              in.temperature[0] = temperature;
+              in.position[0] = position;
+              in.strain_rate[0] = strain_rate;
+              in.composition[0] = compositions;
+
+              in.requested_properties = MaterialModel::MaterialProperties::viscosity;
+
+              MaterialModel::MaterialModelOutputs<dim> out(1,
+                                                           this->n_compositional_fields());
+
+              this->get_material_model().evaluate(in, out);
+
+              // Compressive stress is positive in geoscience applications.
+              SymmetricTensor<2, dim> stress = pressure * unit_symmetric_tensor<dim>();
+
+              // Add elastic stresses if existent.
+              AssertThrow(this->get_parameters().enable_elasticity == false, ExcMessage("Elasticity not supported when computing the CPO stress"));
+
+              const double eta = out.viscosities[0];
+
+              stress += -2. * eta * deviatoric_strain_rate;
+
+
+              // Compute the deviatoric stress tensor after elastic stresses were added.
+              const SymmetricTensor<2, dim> deviatoric_stress = deviator(stress);
+
+              // Compute the second moment invariant of the deviatoric stress
+              // in the same way as the second moment invariant of the deviatoric
+              // strain rate is computed in the viscoplastic material model.
+              // TODO check that this is valid for the compressible case.
+              //const double stress_invariant = (std::sqrt(std::max(-second_invariant(deviatoric_stress), 0.)));
+
+              const std::array< double, dim > eigenvalues = dealii::eigenvalues(deviatoric_stress);
+              double differential_stress = eigenvalues[0]-eigenvalues[dim-1];
+
               return compute_derivatives_drexpp(cpo_index,
                                                    data,
                                                    mineral_i,
