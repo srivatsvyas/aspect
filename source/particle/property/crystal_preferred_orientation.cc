@@ -746,7 +746,7 @@ namespace aspect
 
               for (unsigned int grain_i = 0; grain_i < n_grains; ++grain_i)
                 {
-                  sum_of_volumes += (4./3.) * numbers::PI * std::pow(get_volume_fractions_grains(cpo_index,data,mineral_i,grain_i)* 0.5,3);
+                  sum_area +=  numbers::PI * std::pow(get_volume_fractions_grains(cpo_index,data,mineral_i,grain_i)* 0.5,2.0);
                 }
 
               for (unsigned int grain_i = 0; grain_i < n_grains; ++grain_i)
@@ -760,13 +760,48 @@ namespace aspect
                       Assert(std::isfinite(vf_new),ExcMessage("vf_new is not finite before it is set. grain_i = "
                                                               + std::to_string(grain_i) + ", volume_fractions[grain_i] = " + std::to_string(get_volume_fractions_grains(cpo_index,data,mineral_i,grain_i))
                                                               + ", derivatives.first[grain_i] = " + std::to_string(derivatives.first[grain_i])));
-
-                      if (this ->get_time() !=0)
-                        vf_new = get_volume_fractions_grains(cpo_index,data,mineral_i,grain_i) + dt * (((4./3.) * numbers::PI * std::pow(vf_new* 0.5,3))/sum_of_volumes) * derivatives.first[grain_i];
+                      /*
+                        Here we actually update the grain size post recovery by either grain boundary migration(GBM) or grain growth(GG).
+                        The bulk recrystalized grain size set the upper bounds on the amount of growth or shrinkage a grain can experience. 
+                      */
+                      if ((this ->get_time() != 0 ) && (area_sum > 0.))
+                      {
+                        if(std::abs(dt * (( numbers::PI * std::pow(vf_new* 0.5,2.))/area_sum) * derivatives.first[grain_i]) <= get_piezometer_mineral(cpo_index,data,mineral_i))
+                        {
+                          vf_new = get_volume_fractions_grains(cpo_index,data,mineral_i,grain_i) + (dt * (( numbers::PI * std::pow(vf_new* 0.5,2.0))/sum_area) * derivatives.first[grain_i]);
+                          set_grain_size_change(cpo_index,data,mineral_i,grain_i, (dt * (( numbers::PI * std::pow(vf_new* 0.5,2.0))/sum_area) * derivatives.first[grain_i]));  
+                        }
+                        else
+                        if((dt * (( numbers::PI * std::pow(vf_new* 0.5,2.))/area_sum) * derivatives.first[grain_i]) < 0)
+                          {
+                            vf_new = get_volume_fractions_grains(cpo_index,data,mineral_i,grain_i) - get_piezometer_mineral(cpo_index,data,mineral_i);
+                            set_grain_size_change(cpo_index,data,mineral_i,grain_i, -1.0 * get_piezometer_mineral(cpo_index,data,mineral_i));
+                            break;
+                          }
+                        else 
+                        if((dt * (( numbers::PI * std::pow(vf_new* 0.5,2.))/area_sum) * derivatives.first[grain_i]) > 0)
+                         {
+                            vf_new = get_volume_fractions_grains(cpo_index,data,mineral_i,grain_i) + get_piezometer_mineral(cpo_index,data,mineral_i);
+                            set_grain_size_change(cpo_index,data,mineral_i,grain_i, 1.0 * get_piezometer_mineral(cpo_index,data,mineral_i));
+                            break;
+                         }
+                      }
                       else
+                      {
                         vf_new = vf_new;
-                      
-                      set_grain_size_change(cpo_index,data,mineral_i,grain_i,dt * (((4./3.) * numbers::PI * std::pow(vf_new* 0.5,3))/sum_of_volumes) * derivatives.first[grain_i]);
+                        set_grain_size_change(cpo_index,data,mineral_i,grain_i, 0.0);
+                      }
+                        
+                      /*
+                        If any grain shrinks below a certain threshold, the grain is assumed to be consumed by other growing grains and the slot is assigned a grain size of 0 and grain status of -1, allowing the slot to participate in dynamic recrystallization.
+                      */ 
+                     
+                      if(vf_new < 3 * std::pow(10,-6))
+                      {
+                        vf_new = 0.0;
+                        set_grain_status(cpo_index,data,mineral_i,grain_i,-1);
+                      }
+
                       Assert(std::isfinite(get_volume_fractions_grains(cpo_index,data,mineral_i,grain_i)),ExcMessage("volume_fractions[grain_i] is not finite. grain_i = "
                              + std::to_string(grain_i) + ", volume_fractions[grain_i] = " + std::to_string(get_volume_fractions_grains(cpo_index,data,mineral_i,grain_i))
                              + ", derivatives.first[grain_i] = " + std::to_string(derivatives.first[grain_i])));
