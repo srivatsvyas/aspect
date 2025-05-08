@@ -307,19 +307,7 @@ namespace aspect
                   case Output::GBMVelocity:
                     string_stream_content_raw << "mineral_" << write_raw_cpo[property_i].first << "_grain_boundary_velocity" << " ";
                     break;  
-                  
-                  case Output::NRxGrains:
-                    string_stream_content_raw << "mineral_" << write_raw_cpo[property_i].first << "_nrx_grains" << " ";
-                    break;  
-                  
-                  case Output::PreRxSize:
-                    string_stream_content_raw << "mineral_" << write_raw_cpo[property_i].first << "_pre_rx_size" << " ";
-                    break;  
-                   
-                  case Output::PostRxSize:
-                    string_stream_content_raw << "mineral_" << write_raw_cpo[property_i].first << "_post_rx_size" << " ";
-                    break;  
-                  
+                
                   case Output::GrainSizeChange:
                     string_stream_content_raw << "mineral_" << write_raw_cpo[property_i].first << "_grain_size_change" << " ";
                     break;
@@ -401,18 +389,6 @@ namespace aspect
                   
                   case Output::GBMVelocity:
                     string_stream_content_draw_volume_weighting << "mineral_" << write_raw_cpo[property_i].first << "_grain_boundary_velocity" << " ";
-                    break;  
-                  
-                  case Output::NRxGrains:
-                    string_stream_content_draw_volume_weighting << "mineral_" << write_raw_cpo[property_i].first << "_nrx_grains" << " ";
-                    break;  
-                  
-                  case Output::PreRxSize:
-                    string_stream_content_draw_volume_weighting << "mineral_" << write_raw_cpo[property_i].first << "_pre_rx_size" << " ";
-                    break;  
-                   
-                  case Output::PostRxSize:
-                    string_stream_content_draw_volume_weighting << "mineral_" << write_raw_cpo[property_i].first << "_post_rx_size" << " ";
                     break;  
                   
                   case Output::GrainSizeChange:
@@ -595,31 +571,7 @@ namespace aspect
                                                         write_raw_cpo[property_i].first,
                                                         grain) << " ";
                             break;  
-                          
-                          case Output::NRxGrains:
-                            string_stream_content_raw << cpo_particle_property.get_n_rx_grains(
-                                                        cpo_data_position,
-                                                        properties,
-                                                        write_raw_cpo[property_i].first,
-                                                        grain) << " ";
-                            break;  
-                          
-                          case Output::PreRxSize:
-                            string_stream_content_raw << cpo_particle_property.get_pre_rx_size(
-                                                        cpo_data_position,
-                                                        properties,
-                                                        write_raw_cpo[property_i].first,
-                                                        grain) << " ";
-                            break;  
-                           
-                          case Output::PostRxSize:
-                            string_stream_content_raw << cpo_particle_property.get_post_rx_size(
-                                                        cpo_data_position,
-                                                        properties,
-                                                        write_raw_cpo[property_i].first,
-                                                        grain) << " ";
-                            break;  
-                          
+                                                    
                           case Output::GrainSizeChange:
                             string_stream_content_raw << cpo_particle_property.get_grain_size_change(
                                                         cpo_data_position,
@@ -775,31 +727,7 @@ namespace aspect
                                                         write_draw_volume_weighted_cpo[property_i].first,
                                                         grain) << " ";
                             break;  
-                          
-                          case Output::NRxGrains:
-                            string_stream_content_draw_volume_weighting << cpo_particle_property.get_n_rx_grains(
-                                                        cpo_data_position,
-                                                        properties,
-                                                        write_draw_volume_weighted_cpo[property_i].first,
-                                                        grain) << " ";
-                            break;  
-                          
-                          case Output::PreRxSize:
-                            string_stream_content_draw_volume_weighting << cpo_particle_property.get_pre_rx_size(
-                                                        cpo_data_position,
-                                                        properties,
-                                                        write_draw_volume_weighted_cpo[property_i].first,
-                                                        grain) << " ";
-                            break;  
-                           
-                          case Output::PostRxSize:
-                            string_stream_content_draw_volume_weighting << cpo_particle_property.get_post_rx_size(
-                                                        cpo_data_position,
-                                                        properties,
-                                                        write_draw_volume_weighted_cpo[property_i].first,
-                                                        grain) << " ";
-                            break;  
-                          
+                                                   
                           case Output::GrainSizeChange:
                             string_stream_content_draw_volume_weighting << cpo_particle_property.get_grain_size_change(
                                                         cpo_data_position,

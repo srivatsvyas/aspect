@@ -434,7 +434,7 @@ namespace aspect
            * @param mineral_i The mineral to get the value of the volume fraction of a mineral for.
            */
           inline
-          double get_recrystalized_grain_size_mineral(const unsigned int cpo_data_position,
+          double get_bulk_recrystalization_grain_size_mineral(const unsigned int cpo_data_position,
                                              const ArrayView<double> &data,
                                              const unsigned int mineral_i) const
           {
@@ -450,7 +450,7 @@ namespace aspect
            * @param piezometer The value of the piezometer predicted for the mineral phase.
            */
           inline
-          void set_recrystalized_grain_size_mineral(const unsigned int cpo_data_position,
+          void set_bulk_recrystalization_grain_size_mineral(const unsigned int cpo_data_position,
                                            const ArrayView<double> &data,
                                            const unsigned int mineral_i,
                                            const double recrystalization_size) const
@@ -679,7 +679,7 @@ namespace aspect
                                            const unsigned int grain_i,
                                            const double viscosity_ratio) const
           {
-            data[cpo_data_position + 16 + grain_i * 22 + mineral_i * (n_grains * 22 + 4)] = strain_rate_ratio;
+            data[cpo_data_position + 16 + grain_i * 22 + mineral_i * (n_grains * 22 + 4)] = viscosity_ratio;
           }
 
           /**
@@ -980,6 +980,34 @@ namespace aspect
              data[cpo_data_position + 25 + grain_i * 22 + mineral_i * (n_grains * 22 + 4)] = dislocation_density;
            }
 
+           inline
+           double get_strain_accumulated(const unsigned int cpo_data_position,
+                                              const ArrayView<const double> &data,
+                                              const unsigned int mineral_i,
+                                              const unsigned int grain_i) const
+           {
+             return data[cpo_data_position + 25 + grain_i * 22 + mineral_i * (n_grains * 22 + 4)];
+           }
+ 
+           /**
+            * @brief Sets the value in the data array representing the volume fraction of a grain.
+            *
+            * @param cpo_data_position The starting index/position of the cpo data in the particle data vector.
+            * @param data The particle data vector.
+            * @param mineral_i The mineral to set the value of the volume fraction of a grain for.
+            * @param grain_i The grain to set the value of the volume fraction of.
+            * @param volume_fractions_grains The value of the volume fraction of a grain to set.
+            */
+           inline
+           void set_strain_accumulated(const unsigned int cpo_data_position,
+                                            const ArrayView<double> &data,
+                                            const unsigned int mineral_i,
+                                            const unsigned int grain_i,
+                                            const double strain_accumulated) const
+           {
+             data[cpo_data_position + 25 + grain_i * 22 + mineral_i * (n_grains * 22 + 4)] = strain_accumulated;
+           }
+
         private:
           /**
            * Computes a random rotation matrix.
@@ -1146,11 +1174,11 @@ namespace aspect
           
           // For initializing the grain size with a normal distribution
           double normal_distribution_mean;
-          double normal_distribution_standard_deviation.
+          double normal_distribution_standard_deviation;
 
           // For initializing the grain size with a lognormal distribution
           double lognormal_distribution_mean;
-          double lognormal_distribution_standard_deviation.
+          double lognormal_distribution_standard_deviation;
           
           // For initializing the grain size with a uniform  distribution
           double uniform_distribution_max;

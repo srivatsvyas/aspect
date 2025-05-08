@@ -81,15 +81,9 @@ namespace aspect
         double one = uniform_distribution(this->random_number_generator);
         double two = uniform_distribution(this->random_number_generator);
         double three = uniform_distribution(this->random_number_generator);
-        double rand_def = uniform_distribution(this->random_number_generator);
-
-        double theta;
-        if(this->get_time() != 0)
-          theta = 2.0 * rand_def; // Rotation about the pole (Z)
-        else
-          theta = 2.0 * M_PI * one;
-        
-          double phi = 2.0 * M_PI * two; // For direction of pole deflection.
+      
+        double theta = 2.0 * M_PI * one;
+        double phi = 2.0 * M_PI * two; // For direction of pole deflection.
         double z = 2.0* three; //For magnitude of pole deflection.
 
         // Compute a vector V used for distributing points over the sphere
@@ -227,10 +221,9 @@ namespace aspect
               { 
                 if(cpo_derivative_algorithm == CPODerivativeAlgorithm::drexpp)
                 {
+                  std::vector<std::array<double,3>>orientation; // declaring this vector ahead of time in the case of initializing D-Rex++ with fabric from an input file
                   if(initial_grains_model == CPOInitialGrainsModel::pre_existing_fabric)
                     {
-                       std::vector<std::array<double,3>>orientation;
-
                        std::ifstream file(input_orientation_file);
                        if(!file)
                        {
@@ -251,7 +244,7 @@ namespace aspect
                             std::cerr<<"Error: Failed to parse line: "<<line<<std::endl;
                             assert(false && "File parsing error");
                           }
-                          orientations.push_back({phi1, phi2, phi3});
+                          orientation.push_back({{phi1, phi2, phi3}});
                           file.close();
                        }
                      }
@@ -266,7 +259,7 @@ namespace aspect
                         volume_fractions_grains[mineral_i][grain_i] = distribution(this->random_number_generator);
                         while(volume_fractions_grains[mineral_i][grain_i] <= 0.0)
                         {
-                          volume_fractions_grains[mineral_i][grain_i] = distribution(this->random_number_generator)
+                          volume_fractions_grains[mineral_i][grain_i] = distribution(this->random_number_generator);
                         }
                       }
                       volume_fractions_grains[mineral_i][grain_i] = initial_grain_size;
@@ -287,12 +280,14 @@ namespace aspect
                     if(initial_grains_model == CPOInitialGrainsModel::pre_existing_fabric)
                     {
                        Tensor<2,3> dcmg;
-                       dcmg = aspect::Utilities::zxz_euler_angles_to_rotation_matrix(orientation[grain_i][0],orientation[grain_i][1],[grain_i][2]);
+                       dcmg = aspect::Utilities::zxz_euler_angles_to_rotation_matrix(orientation[grain_i][0],orientation[grain_i][1],orientation[grain_i][2]);
                        rotation_matrices_grains[mineral_i][grain_i] = dcmg;
                     }
                     else
+                    {
                       this->compute_random_rotation_matrix(rotation_matrices_grains[mineral_i][grain_i]);
-                     
+                    }
+                      
                       strain_rate_ratio[mineral_i][grain_i] = 0.;
                       viscosity_ratio[mineral_i][grain_i] = 0.;
                       rx_fractions[mineral_i][grain_i] = 0.;
@@ -741,7 +736,7 @@ namespace aspect
           case CPODerivativeAlgorithm::drexpp:
             {
               double sum_of_volumes = 0;
-              double sum_volume_fractions = 0;
+              double sum_area = 0;
               Tensor<2,3> cosine_ref;
 
               for (unsigned int grain_i = 0; grain_i < n_grains; ++grain_i)
@@ -764,25 +759,25 @@ namespace aspect
                         Here we actually update the grain size post recovery by either grain boundary migration(GBM) or grain growth(GG).
                         The bulk recrystalized grain size set the upper bounds on the amount of growth or shrinkage a grain can experience. 
                       */
-                      if ((this ->get_time() != 0 ) && (area_sum > 0.))
+                      if ((this ->get_time() != 0 ) && (sum_area > 0.))
                       {
-                        if(std::abs(dt * (( numbers::PI * std::pow(vf_new* 0.5,2.))/area_sum) * derivatives.first[grain_i]) <= get_piezometer_mineral(cpo_index,data,mineral_i))
+                        if(std::abs(dt * (( numbers::PI * std::pow(vf_new* 0.5,2.))/sum_area) * derivatives.first[grain_i]) <= get_bulk_recrystalization_grain_size_mineral(cpo_index,data,mineral_i))
                         {
                           vf_new = get_volume_fractions_grains(cpo_index,data,mineral_i,grain_i) + (dt * (( numbers::PI * std::pow(vf_new* 0.5,2.0))/sum_area) * derivatives.first[grain_i]);
                           set_grain_size_change(cpo_index,data,mineral_i,grain_i, (dt * (( numbers::PI * std::pow(vf_new* 0.5,2.0))/sum_area) * derivatives.first[grain_i]));  
                         }
                         else
-                        if((dt * (( numbers::PI * std::pow(vf_new* 0.5,2.))/area_sum) * derivatives.first[grain_i]) < 0)
+                        if((dt * (( numbers::PI * std::pow(vf_new* 0.5,2.))/sum_area) * derivatives.first[grain_i]) < 0)
                           {
-                            vf_new = get_volume_fractions_grains(cpo_index,data,mineral_i,grain_i) - get_piezometer_mineral(cpo_index,data,mineral_i);
-                            set_grain_size_change(cpo_index,data,mineral_i,grain_i, -1.0 * get_piezometer_mineral(cpo_index,data,mineral_i));
+                            vf_new = get_volume_fractions_grains(cpo_index,data,mineral_i,grain_i) - get_bulk_recrystalization_grain_size_mineral(cpo_index,data,mineral_i);
+                            set_grain_size_change(cpo_index,data,mineral_i,grain_i, -1.0 * get_bulk_recrystalization_grain_size_mineral(cpo_index,data,mineral_i));
                             break;
                           }
                         else 
-                        if((dt * (( numbers::PI * std::pow(vf_new* 0.5,2.))/area_sum) * derivatives.first[grain_i]) > 0)
+                        if((dt * (( numbers::PI * std::pow(vf_new* 0.5,2.))/sum_area) * derivatives.first[grain_i]) > 0)
                          {
-                            vf_new = get_volume_fractions_grains(cpo_index,data,mineral_i,grain_i) + get_piezometer_mineral(cpo_index,data,mineral_i);
-                            set_grain_size_change(cpo_index,data,mineral_i,grain_i, 1.0 * get_piezometer_mineral(cpo_index,data,mineral_i));
+                            vf_new = get_volume_fractions_grains(cpo_index,data,mineral_i,grain_i) + get_bulk_recrystalization_grain_size_mineral(cpo_index,data,mineral_i);
+                            set_grain_size_change(cpo_index,data,mineral_i,grain_i, 1.0 * get_bulk_recrystalization_grain_size_mineral(cpo_index,data,mineral_i));
                             break;
                          }
                       }
@@ -818,7 +813,7 @@ namespace aspect
                     }
                       
                   set_volume_fractions_grains(cpo_index,data,mineral_i,grain_i,vf_new);
-                  sum_volume_fractions += vf_new;
+                  sum_of_volumes += vf_new;
 
                   // Do the rotation matrix for this grain
                   cosine_ref = get_rotation_matrix_grains(cpo_index,data,mineral_i,grain_i);
@@ -838,8 +833,8 @@ namespace aspect
                   set_rotation_matrix_grains(cpo_index,data,mineral_i,grain_i,cosine_new);
 
                 }
-              Assert(sum_volume_fractions != 0, ExcMessage("The sum of all grain volume fractions of a mineral is equal to zero. This should not happen."));
-              return sum_volume_fractions;
+              Assert(sum_of_volumes != 0, ExcMessage("The sum of all grain volume fractions of a mineral is equal to zero. This should not happen."));
+              return sum_of_volumes;
               break;
             }
           default:
@@ -956,6 +951,16 @@ namespace aspect
 
               const std::array< double, dim > eigenvalues = dealii::eigenvalues(deviatoric_stress);
               double differential_stress = eigenvalues[0]-eigenvalues[dim-1];
+
+              // SV: For now Im declaring only the bulk_recrystalization grain_size using the piezometer;
+              std::array<double, 2> A = {{0.015,std::pow(10,3.8)}};
+              std::array<double, 2> m = {{-1.33, -1.28}};
+              
+              for(unsigned int i =0; i < n_minerals; ++i)
+              {
+                const double piezometer = A[mineral_i] * std::pow(differential_stress/1e6,m[mineral_i]);
+                set_bulk_recrystalization_grain_size_mineral(cpo_index,data,mineral_i,piezometer);
+              }
 
               return compute_derivatives_drexpp(cpo_index,
                                                    data,
@@ -1263,23 +1268,14 @@ namespace aspect
                     left_overs = volume - (n_recrystalized_grains * rx_volume);
                     left_over_grain_size = 2.0 * std::pow((left_overs * (1.0/numbers::PI)),(1.0/2.0));
                   }
-                  
-               
-                set_pre_rx_size(cpo_index,data,mineral_i,grain_i,grain_size);
-                set_post_rx_size(cpo_index,data,mineral_i,grain_i,left_over_grain_size);
-                set_n_rx_grains(cpo_index,data,mineral_i,grain_i,n_recrystalized_grains);
-                
+                                
                 double unrx_portion;
                 if(volume != 0.)
                    unrx_portion = (volume -(n_recrystalized_grains * rx_volume)/volume)*recrystalized_fraction[grain_i];
                 
                 set_rx_fractions(cpo_index,data,mineral_i,grain_i,unrx_portion);
                 set_volume_fractions_grains(cpo_index,data,mineral_i,grain_i,left_over_grain_size);
-                if((grain_i == 2)&& (mineral_i == 0))
-                {
-                  std::cout<<"\ngrain size post rx = "<<left_over_grain_size<<std::endl;
-                }
-
+                
                 if(permutation_vector.size() >= n_recrystalized_grains)
                   {
                     for (unsigned int recrystalize_grain_i = 0; recrystalize_grain_i < n_recrystalized_grains  ; ++recrystalize_grain_i)
