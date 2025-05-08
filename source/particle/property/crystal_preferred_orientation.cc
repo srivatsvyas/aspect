@@ -157,10 +157,13 @@ namespace aspect
         // The rotation matrix is a direction cosine matrix, representing the orientation of the grain in the domain.
         // The fabric is determined later in the computations, so initialize it to -1.
         std::vector<double> deformation_type(n_minerals, -1.0);
+        std::vector<double> bulk_recrystalized_grain_size(n_minerals, 0.0);
+        std::vector<double> mean_grain_size(n_minerals);
         std::vector<std::vector<double >>volume_fractions_grains(n_minerals);
         std::vector<std::vector<Tensor<2,3>>> rotation_matrices_grains(n_minerals);
         std::vector<std::vector<int    >>grain_status(n_minerals);
-        std::vector<std::vector<double >>strain_accumulated(n_minerals);
+        std::vector<std::vector<double >>viscosity_ratio(n_minerals);
+        std::vector<std::vector<double >>strain_rate_ratio(n_minerals);
         std::vector<std::vector<double >>rx_fractions(n_minerals);
         std::vector<std::vector<int    >>active_slip_system(n_minerals);
         std::vector<std::vector<double >>strain_rate_grains(n_minerals);
@@ -168,9 +171,6 @@ namespace aspect
         std::vector<std::vector<double >>strain_energy(n_minerals);
         std::vector<std::vector<double >>surface_energy(n_minerals);
         std::vector<std::vector<double >>grain_boundary_velocity(n_minerals);
-        std::vector<std::vector<int    >>nrx_grains(n_minerals);
-        std::vector<std::vector<double >>pre_rx_size(n_minerals);
-        std::vector<std::vector<double >>post_rx_size(n_minerals);
         std::vector<std::vector<double >>grain_size_change(n_minerals);
         std::vector<std::vector<double >>dislocation_density(n_minerals);
         
@@ -179,17 +179,15 @@ namespace aspect
             volume_fractions_grains[mineral_i].resize(n_grains);
             rotation_matrices_grains[mineral_i].resize(n_grains);
             grain_status[mineral_i].resize(n_grains);
+            strain_rate_ratio[mineral_i].resize(n_grains);
+            viscosity_ratio[mineral_i].resize(n_grains);
             rx_fractions[mineral_i].resize(n_grains);
-            strain_accumulated[mineral_i].resize(n_grains);
             active_slip_system[mineral_i].resize(n_grains);
             strain_rate_grains[mineral_i].resize(n_grains);
             differential_stress[mineral_i].resize(n_grains);
             strain_energy[mineral_i].resize(n_grains);
             surface_energy[mineral_i].resize(n_grains);
             grain_boundary_velocity[mineral_i].resize(n_grains);
-            nrx_grains[mineral_i].resize(n_grains);
-            pre_rx_size[mineral_i].resize(n_grains);
-            post_rx_size[mineral_i].resize(n_grains);
             grain_size_change[mineral_i].resize(n_grains);
             dislocation_density[mineral_i].resize(n_grains);
             // This will be set by the initial grain subsection.
@@ -229,10 +227,48 @@ namespace aspect
               { 
                 if(cpo_derivative_algorithm == CPODerivativeAlgorithm::drexpp)
                 {
+                  if(initial_grains_model == CPOInitialGrainsModel::pre_existing_fabric)
+                    {
+                       std::vector<std::array<double,3>>orientation;
+
+                       std::ifstream file(input_orientation_file);
+                       if(!file)
+                       {
+                         std::cerr<< "Error: Unable to open file!\n";
+                         assert(false && 'File parsing error');
+                       }
+
+                       double phi1, phi2, phi3;
+                       std::string line;
+
+                       while(std::getline(file,line))
+                       {
+                          // Read file line by line
+                          std::istringstream iss(line);
+                          if(!(iss >>phi1 >>phi2 >>phi3))
+                          {
+                            // Parse three space-separated values
+                            std::cerr<<"Error: Failed to parse line: "<<line<<std::endl;
+                            assert(false && "File parsing error");
+                          }
+                          orientations.push_back({phi1, phi2, phi3});
+                          file.close();
+                       }
+                     }
+
                   for(unsigned int grain_i = 0; grain_i < n_grains; ++grain_i)
                   {
                     if(grain_i < n_grains_init)
                     {
+                      if(initial_grains_model == CPOInitialGrainsModel::normal_distribution_grainsize_and_random_initial_orientations)
+                      {
+                        std::normal_distribution<double> distribution(normal_distribution_mean,normal_distribution_standard_deviation); 
+                        volume_fractions_grains[mineral_i][grain_i] = distribution(this->random_number_generator);
+                        while(volume_fractions_grains[mineral_i][grain_i] <= 0.0)
+                        {
+                          volume_fractions_grains[mineral_i][grain_i] = distribution(this->random_number_generator)
+                        }
+                      }
                       volume_fractions_grains[mineral_i][grain_i] = initial_grain_size;
                       grain_status[mineral_i][grain_i]= 0;
                     }
@@ -247,8 +283,18 @@ namespace aspect
                       volume_fractions_grains[mineral_i][grain_i] = 0.;
                       grain_status[mineral_i][grain_i] = -1;
                     }
+                    
+                    if(initial_grains_model == CPOInitialGrainsModel::pre_existing_fabric)
+                    {
+                       Tensor<2,3> dcmg;
+                       dcmg = aspect::Utilities::zxz_euler_angles_to_rotation_matrix(orientation[grain_i][0],orientation[grain_i][1],[grain_i][2]);
+                       rotation_matrices_grains[mineral_i][grain_i] = dcmg;
+                    }
+                    else
                       this->compute_random_rotation_matrix(rotation_matrices_grains[mineral_i][grain_i]);
-                      strain_accumulated[mineral_i][grain_i] = 0.;
+                     
+                      strain_rate_ratio[mineral_i][grain_i] = 0.;
+                      viscosity_ratio[mineral_i][grain_i] = 0.;
                       rx_fractions[mineral_i][grain_i] = 0.;
                       active_slip_system[mineral_i][grain_i] = 0;
                       strain_rate_grains[mineral_i][grain_i] = 0.;
@@ -256,9 +302,6 @@ namespace aspect
                       strain_energy[mineral_i][grain_i] = 0.;
                       surface_energy[mineral_i][grain_i] =0.;
                       grain_boundary_velocity[mineral_i][grain_i] = 0.;
-                      nrx_grains[mineral_i][grain_i] = 0;
-                      pre_rx_size[mineral_i][grain_i]= 0.;
-                      post_rx_size[mineral_i][grain_i]=0.;
                       grain_size_change[mineral_i][grain_i]= 0.;
                       dislocation_density[mineral_i][grain_i] =0.;
                   } 
@@ -276,7 +319,8 @@ namespace aspect
                       // set a uniform random rotation_matrix per grain
                       this->compute_random_rotation_matrix(rotation_matrices_grains[mineral_i][grain_i]);
                       grain_status[mineral_i][grain_i] = 0;
-                      strain_accumulated[mineral_i][grain_i] = 0.;
+                      strain_rate_ratio[mineral_i][grain_i] = 0.;
+                      viscosity_ratio[mineral_i][grain_i] = 0.;
                       rx_fractions[mineral_i][grain_i] = 0.;
                       active_slip_system[mineral_i][grain_i] = 0;
                       strain_rate_grains[mineral_i][grain_i] = 0.;
@@ -284,9 +328,6 @@ namespace aspect
                       strain_energy[mineral_i][grain_i] = 0.;
                       surface_energy[mineral_i][grain_i] =0.;
                       grain_boundary_velocity[mineral_i][grain_i] = 0.;
-                      nrx_grains[mineral_i][grain_i] = 0;
-                      pre_rx_size[mineral_i][grain_i]= 0.;
-                      post_rx_size[mineral_i][grain_i]=0.;
                       grain_size_change[mineral_i][grain_i]= 0.;
                       dislocation_density[mineral_i][grain_i] =0.;
                     }
@@ -299,6 +340,8 @@ namespace aspect
           {
             data.emplace_back(deformation_type[mineral_i]);
             data.emplace_back(volume_fractions_minerals[mineral_i]);
+            data.emplace_back(bulk_recrystalized_grain_size[mineral_i]);
+            data.emplace_back(mean_grain_size[mineral_i]);
             for (unsigned int grain_i = 0; grain_i < n_grains ; ++grain_i)
               {
                 data.emplace_back(volume_fractions_grains[mineral_i][grain_i]);
@@ -308,7 +351,8 @@ namespace aspect
                     data.emplace_back(rotation_matrices_grains[mineral_i][grain_i][index]);
                   }
                     data.emplace_back(grain_status[mineral_i][grain_i]);
-                    data.emplace_back(strain_accumulated[mineral_i][grain_i]);
+                    data.emplace_back(strain_rate_ratio[mineral_i][grain_i]);
+                    data.emplace_back(viscosity_ratio[mineral_i][grain_i]);
                     data.emplace_back(rx_fractions[mineral_i][grain_i]);
                     data.emplace_back(active_slip_system[mineral_i][grain_i]);
                     data.emplace_back(strain_rate_grains[mineral_i][grain_i]);
@@ -316,9 +360,6 @@ namespace aspect
                     data.emplace_back(strain_energy[mineral_i][grain_i]);
                     data.emplace_back(surface_energy[mineral_i][grain_i]);
                     data.emplace_back(grain_boundary_velocity[mineral_i][grain_i]);
-                    data.emplace_back(nrx_grains[mineral_i][grain_i]);
-                    data.emplace_back(pre_rx_size[mineral_i][grain_i]);
-                    data.emplace_back(post_rx_size[mineral_i][grain_i]);
                     data.emplace_back(grain_size_change[mineral_i][grain_i]);
                     data.emplace_back(dislocation_density[mineral_i][grain_i]);
                   
@@ -569,6 +610,8 @@ namespace aspect
           {
             property_information.emplace_back("cpo mineral " + std::to_string(mineral_i) + " type",1);
             property_information.emplace_back("cpo mineral " + std::to_string(mineral_i) + " volume fraction",1);
+            property_information.emplace_back("cpo mineral " + std::to_string(mineral_i) + " bulk recrystalized grain size",1);
+            property_information.emplace_back("cpo mineral " + std::to_string(mineral_i) + " mean grain size",1);
 
             for (unsigned int grain_i = 0; grain_i < n_grains; ++grain_i)
               {
@@ -580,7 +623,8 @@ namespace aspect
                   }
                 
                 property_information.emplace_back("cpo mineral " + std::to_string(mineral_i) + " grain " + std::to_string(grain_i) + " grain status",1);
-                property_information.emplace_back("cpo mineral " + std::to_string(mineral_i) + " grain " + std::to_string(grain_i) + " strain accumulated",1);
+                property_information.emplace_back("cpo mineral " + std::to_string(mineral_i) + " grain " + std::to_string(grain_i) + " strain rate ratio",1);
+                property_information.emplace_back("cpo mineral " + std::to_string(mineral_i) + " grain " + std::to_string(grain_i) + " viscosity ratio",1);
                 property_information.emplace_back("cpo mineral " + std::to_string(mineral_i) + " grain " + std::to_string(grain_i) + " recrystalized fractions",1);
                 property_information.emplace_back("cpo mineral " + std::to_string(mineral_i) + " grain " + std::to_string(grain_i) + " active slip system",1);
                 property_information.emplace_back("cpo mineral " + std::to_string(mineral_i) + " grain " + std::to_string(grain_i) + " strain rate",1);
@@ -588,12 +632,8 @@ namespace aspect
                 property_information.emplace_back("cpo mineral " + std::to_string(mineral_i) + " grain " + std::to_string(grain_i) + " strain energy",1);
                 property_information.emplace_back("cpo mineral " + std::to_string(mineral_i) + " grain " + std::to_string(grain_i) + " surface energy",1);
                 property_information.emplace_back("cpo mineral " + std::to_string(mineral_i) + " grain " + std::to_string(grain_i) + " grain boundary velocity",1);
-                property_information.emplace_back("cpo mineral " + std::to_string(mineral_i) + " grain " + std::to_string(grain_i) + " no. of recrystalized grains",1);
-                property_information.emplace_back("cpo mineral " + std::to_string(mineral_i) + " grain " + std::to_string(grain_i) + " pre recrystalization grain size",1);
-                property_information.emplace_back("cpo mineral " + std::to_string(mineral_i) + " grain " + std::to_string(grain_i) + " post recrystalization grain size",1);
                 property_information.emplace_back("cpo mineral " + std::to_string(mineral_i) + " grain " + std::to_string(grain_i) + " grain size change",1);
                 property_information.emplace_back("cpo mineral " + std::to_string(mineral_i) + " grain " + std::to_string(grain_i) + " dislocation density",1);
-
               }
           }
 
@@ -630,7 +670,7 @@ namespace aspect
             rotation_matrix += dt * rotation_matrix * derivatives.second[grain_i];
             set_rotation_matrix_grains(cpo_index,data,mineral_i,grain_i,rotation_matrix);
           }
-
+ 
         Assert(sum_volume_fractions != 0, ExcMessage("The sum of all grain volume fractions of a mineral is equal to zero. This should not happen."));
         return sum_volume_fractions;
       }
