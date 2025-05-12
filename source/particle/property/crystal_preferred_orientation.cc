@@ -2261,6 +2261,10 @@ namespace aspect
                                "This list expects 4 entries separated by commas."
                                "Main slip systems from Karato 2008 and "
                                "Bystricky et al., 2001 and from numerical experiments");
+            prm.declare_entry("Input orientation file","input_orientation.dat",
+                                Patterns::Anything(),
+                                "The model used to initialize the CPO for all particles. "
+                                "Currently 'Uniform grains and random uniform rotations' and 'World Builder' are the only valid option.");
 
             prm.declare_entry ("Volume fractions minerals", "0.7, 0.3",
                                Patterns::List(Patterns::Double(0)),
