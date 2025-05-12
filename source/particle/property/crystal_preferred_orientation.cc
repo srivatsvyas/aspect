@@ -757,13 +757,29 @@ namespace aspect
           case CPODerivativeAlgorithm::drexpp:
             {
               double sum_of_volumes = 0;
+              int n_grains_considered = 0;
               double sum_area = 0;
+              double sum_grain_size;
               Tensor<2,3> cosine_ref;
 
               for (unsigned int grain_i = 0; grain_i < n_grains; ++grain_i)
                 {
                   sum_area +=  numbers::PI * std::pow(get_volume_fractions_grains(cpo_index,data,mineral_i,grain_i)* 0.5,2.0);
+                  if(get_volume_fractions_grains(cpo_index,data,mineral_i,grain_i)>0.)
+                  {
+                    sum_grain_size += get_volume_fractions_grains(cpo_index,data,mineral_i,grain_i);
+                    n_grains_considered += 1;
+                  }
                 }
+              
+              if(n_grains_considered > 0)
+              {
+                 set_mean_grain_size_mineral_mineral(cpo_index,data,mineral_i,(sum_grain_size/n_grains_considered));
+              } 
+              else
+              {
+                 set_mean_grain_size_mineral_mineral(cpo_index,data,mineral_i,0.);
+              }
 
               for (unsigned int grain_i = 0; grain_i < n_grains; ++grain_i)
                 {
@@ -1425,8 +1441,6 @@ namespace aspect
         // create local variables
         std::vector<Tensor<1,3>> spin_vectors(n_grains);
         
-        const double pressure = 3e8;            //SV_uncomment : I am using a hard-coded value for pressure
-
         // Constants -> the values below are for olivine alone (SV: Do I add the citations?)
         const double shear_modulus = 8.0 * std::pow(10.0,10.0);
         const double burgers_vector = 5.0 * std::pow(10.0,-10.0);
@@ -1440,7 +1454,7 @@ namespace aspect
         /* 
            Constants for the calculation of rheology. These are hardcoded values of olivine & pyroxene rheology (see supplementary material Dannberg et al, 2017)
         */
-
+        const double pressure = 1e9;
         const double pre_exponential_dis = 8.33 * std::pow(10,-17);
         const double exponent_dis = 3.5;
         const double activation_energy_dis = 5.3 * std::pow(10,5);
