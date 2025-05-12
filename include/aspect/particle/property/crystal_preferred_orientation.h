@@ -1183,7 +1183,8 @@ namespace aspect
           // For initializing the grain size with a uniform  distribution
           double uniform_distribution_max;
           double uniform_distribution_min;
-
+          
+          std::string input_orientation_file;
           /**
           * Other D-Rex^{++} specific parameters
           * 
@@ -1200,9 +1201,9 @@ namespace aspect
           /**
            *  To construct the smart pointers to call functions from the Material Model modules.
            */
-          std::unique_ptr<MaterialModel::Rheology::DiffusionCreep<dim>> rheology_diff;
-          std::unique_ptr<MaterialModel::Rheology::DislocationCreep<dim>> rheology_disl;
-          std::unique_ptr<MaterialModel::Rheology::ViscoPlastic<dim>> rheology_vipl;
+          std::shared_ptr<MaterialModel::Rheology::DiffusionCreep<dim>> rheology_diff;
+          std::shared_ptr<MaterialModel::Rheology::DislocationCreep<dim>> rheology_disl;
+          std::shared_ptr<MaterialModel::Rheology::ViscoPlastic<dim>> rheology_vipl;
 
           double min_strain_rate;
           std::vector<double> thermal_diffusivities;
@@ -1218,7 +1219,7 @@ namespace aspect
           /**
            * Object that handles phase transitions.
            */
-          MaterialModel::MaterialUtilities::PhaseFunction<dim> phase_function;
+          std::shared_ptr<MaterialModel::MaterialUtilities::PhaseFunction<dim>> phase_function;
           /** @} */
 
           

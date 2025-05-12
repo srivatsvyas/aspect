@@ -299,7 +299,28 @@ namespace aspect
                       grain_boundary_velocity[mineral_i][grain_i] = 0.;
                       grain_size_change[mineral_i][grain_i]= 0.;
                       dislocation_density[mineral_i][grain_i] =0.;
-                  } 
+                  }
+                  
+                  // Calculating the mean grain size for the mineral phase in question
+                  for(unsigned int grain_i = 0; grain_i < n_grains; ++grain_i)
+                  {
+                    int grains  = 0;
+                    double sum_grain_size = 0.0;
+
+                    if(volume_fractions_grains[mineral_i][grain_i] > 0.)
+                    {
+                      sum_grain_size = +volume_fractions_grains[mineral_i][grain_i];
+                      grains += 1;
+                    }
+                    if (grains!= 0)
+                    {
+                      mean_grain_size[mineral_i] = sum_grain_size/grains;
+                    }
+                    else
+                    {
+                      mean_grain_size[mineral_i] = 0.0;
+                    }
+                  }
                 }
                 else
                 {
@@ -921,7 +942,7 @@ namespace aspect
               in.position[0] = position;
               in.strain_rate[0] = strain_rate;
               in.composition[0] = compositions;
-
+              
               in.requested_properties = MaterialModel::MaterialProperties::viscosity;
 
               MaterialModel::MaterialModelOutputs<dim> out(1,
@@ -1911,6 +1932,10 @@ namespace aspect
                                "Karato 2008 selector selects a fabric based on stress and water content as defined in "
                                "figure 4 of the Karato 2008 review paper (doi: 10.1146/annurev.earth.36.031207.124120).");
 
+            prm.declare_entry("Input orientation file","input_orientation.dat",
+                                Patterns::Anything(),
+                                "The model used to initialize the CPO for all particles. "
+                                "Currently 'Uniform grains and random uniform rotations' and 'World Builder' are the only valid option.");
 
             prm.declare_entry ("Volume fractions minerals", "0.7, 0.3",
                                Patterns::List(Patterns::Double(0)),
@@ -2064,6 +2089,11 @@ namespace aspect
               {
                 initial_grains_model = CPOInitialGrainsModel::world_builder;
               }
+            else if (model_name == "Pre-existing fabric")
+              {
+                initial_grains_model = CPOInitialGrainsModel::pre_existing_fabric;
+                input_orientation_file = prm.get("Input orientation file");
+              }
             else
               {
                 AssertThrow(false,
@@ -2164,8 +2194,8 @@ namespace aspect
           prm.enter_subsection ("Visco Plastic");
           {
              // Phase transition parameters
-             phase_function.initialize_simulator (this->get_simulator());
-             phase_function.parse_parameters (prm);
+             phase_function->initialize_simulator (this->get_simulator());
+             phase_function->parse_parameters (prm);
  
              // Retrieve the list of composition names
              const std::vector<std::string> list_of_composition_names = this->introspection().get_composition_names();
@@ -2185,17 +2215,17 @@ namespace aspect
                                                                             has_background_field,
                                                                             "Thermal conductivities");
  
-             rheology_diff = std::make_unique<MaterialModel::Rheology::DiffusionCreep<dim>>();
+             rheology_diff = std::make_shared<MaterialModel::Rheology::DiffusionCreep<dim>>();
              rheology_diff->initialize_simulator (this->get_simulator());
-             rheology_diff->parse_parameters(prm, std::make_unique<std::vector<unsigned int>>(phase_function.n_phases_for_each_composition()));
+             rheology_diff->parse_parameters(prm, std::make_unique<std::vector<unsigned int>>(phase_function->n_phases_for_each_composition()));
  
-             rheology_disl = std::make_unique<MaterialModel::Rheology::DislocationCreep<dim>>();
+             rheology_disl = std::make_shared<MaterialModel::Rheology::DislocationCreep<dim>>();
              rheology_disl->initialize_simulator (this->get_simulator());
-             rheology_disl->parse_parameters(prm, std::make_unique<std::vector<unsigned int>>(phase_function.n_phases_for_each_composition()));
+             rheology_disl->parse_parameters(prm, std::make_unique<std::vector<unsigned int>>(phase_function->n_phases_for_each_composition()));
  
-             rheology_vipl = std::make_unique<MaterialModel::Rheology::ViscoPlastic<dim>>();
+             rheology_vipl = std::make_shared<MaterialModel::Rheology::ViscoPlastic<dim>>();
              rheology_vipl->initialize_simulator (this->get_simulator());
-             rheology_vipl->parse_parameters(prm, std::make_unique<std::vector<unsigned int>>(phase_function.n_phases_for_each_composition()));
+             rheology_vipl->parse_parameters(prm, std::make_unique<std::vector<unsigned int>>(phase_function->n_phases_for_each_composition()));
              min_strain_rate = rheology_vipl->min_strain_rate;
  
           }
