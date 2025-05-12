@@ -951,7 +951,7 @@ namespace aspect
               // now compute the normal viscosity to be able to computes the stress
               // Create the material model inputs and outputs to
               // retrieve the current viscosity.
-
+              std::cout<<"mean grain size for mineral = "<<get_mean_grain_size_mineral(cpo_index,data,mineral_i)<<std::endl;
               MaterialModel::MaterialModelInputs<dim> in = MaterialModel::MaterialModelInputs<dim>(1,compositions.size());
               in.pressure[0] = pressure;
               in.temperature[0] = temperature;
