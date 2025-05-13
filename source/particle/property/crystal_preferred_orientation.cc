@@ -1800,7 +1800,14 @@ namespace aspect
                 else
                 if(energy_ratio[grain_i] < 1.0)
                 {
-                  deriv_volume_fractions[grain_i] = (1.0/this->get_timestep()) * (volume_fraction_grain - mean_diameter);
+                  if(this->get_timestep()!= 0)
+                  {
+                    deriv_volume_fractions[grain_i] = (1.0/this->get_timestep()) * (volume_fraction_grain - mean_diameter);
+                  }
+                  else
+                  {
+                    deriv_volume_fractions[grain_i] = 0.;
+                  }
                 }    
                 else
                 {
