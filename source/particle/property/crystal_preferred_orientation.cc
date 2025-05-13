@@ -844,7 +844,17 @@ namespace aspect
 
               for (unsigned int grain_i = 0; grain_i < n_grains; ++grain_i)
                 {
-                  // Do the volume fraction of the grain
+                  double ratio;
+                  if((this->get_time()!=0) && get_grain_status(cpo_index,data,mineral_i,grain_i)>= 0)
+                  {
+                  //   std::cout<<"grain size of grain "<<grain_i<<" = "<<get_volume_fractions_grains(cpo_index,data,mineral_i,grain_i)<<std::endl;
+                    ratio = get_strain_energy(cpo_index,data,mineral_i,grain_i)/get_surface_energy(cpo_index,data,mineral_i,grain_i);
+                   }
+                  else
+                  {
+                    ratio =0;
+                  }
+                    // Do the volume fraction of the grain
                   double vf_old = get_volume_fractions_grains(cpo_index,data,mineral_i,grain_i);
                   double vf_new = get_volume_fractions_grains(cpo_index,data,mineral_i,grain_i);
                   Assert(std::isfinite(vf_new),ExcMessage("vf_new is not finite before it is set."));
@@ -856,7 +866,9 @@ namespace aspect
 
                       if ((this ->get_time() != 0 ) && (area_sum > 0.))
                       {
-                        if(std::abs(dt * (( numbers::PI * std::pow(vf_new* 0.5,2.))/area_sum) * derivatives.first[grain_i]) <= get_piezometer_mineral(cpo_index,data,mineral_i))  
+                        if(ratio > 1)
+                        {
+                          if(std::abs(dt * (( numbers::PI * std::pow(vf_new* 0.5,2.))/area_sum) * derivatives.first[grain_i]) <= get_piezometer_mineral(cpo_index,data,mineral_i))  
                         {
                           vf_new = get_volume_fractions_grains(cpo_index,data,mineral_i,grain_i) + dt * (( numbers::PI * std::pow(vf_new* 0.5,2.))/area_sum) * derivatives.first[grain_i];
                           set_grain_size_change(cpo_index,data,mineral_i,grain_i, dt * (( numbers::PI * std::pow(vf_new* 0.5,2.))/area_sum) * derivatives.first[grain_i]);
@@ -875,6 +887,14 @@ namespace aspect
                             set_grain_size_change(cpo_index,data,mineral_i,grain_i, 1.0 * get_piezometer_mineral(cpo_index,data,mineral_i));
                             break;
                           }
+                        }
+                        else
+                        if(ratio < 1)
+                        {
+                          vf_new = std::pow(std::pow(get_volume_fractions_grains(cpo_index,data,mineral_i,grain_i),3.2) + (dt * (( numbers::PI * std::pow(vf_new* 0.5,2.))/area_sum) * derivatives.first[grain_i]),1.0/3.2);
+                          set_grain_size_change(cpo_index,data,mineral_i,grain_i,(dt * (( numbers::PI * std::pow(vf_new* 0.5,2.))/area_sum) * derivatives.first[grain_i]));
+                          break;
+                        }
                       }
                       else
                       {
@@ -1486,6 +1506,9 @@ namespace aspect
         /* 
            Constants for the calculation of rheology. These are hardcoded values of olivine & pyroxene rheology (see supplementary material Dannberg et al, 2017)
         */
+        const double k0 = 1.8 * std::pow(10,4);
+        const double activation_energy_growth = 620 * std::pow(10,3);
+        const double activation_volume_growth = 5 * std::pow(10,-6);
 
         const double pre_exponential_dis = 8.33 * std::pow(10,-17);
         const double exponent_dis = 3.5;
@@ -1753,9 +1776,13 @@ namespace aspect
         double no_g = 0.0;
         for (unsigned int grain_i = 0; grain_i<n_grains; ++grain_i)
           {
-            if (this-> get_time() != 0)
+            if (this-> get_time()!= 0)
               {
                 const double grain_size = get_volume_fractions_grains(cpo_index,data,mineral_i,grain_i);
+                  if(grain_i == 2192)
+                  {
+                    std::cout<<"grain size = "<<get_volume_fractions_grains(cpo_index,data,mineral_i,grain_i)<<"\tgrain status = "<<get_grain_status(cpo_index,data,mineral_i,grain_i)<<std::endl;
+                  }
                 if ((grain_size > 0.) && (rx_now[grain_i] == false))
                 {
                   number_grains += 1.0;
@@ -1763,6 +1790,10 @@ namespace aspect
                   sum_area += area;
                   mean_strain_energy += (area * strain_energy[grain_i]);
                   const double f_surface = (3. * interfacial_energy*((2./get_volume_fractions_grains(cpo_index,data,mineral_i,grain_i)) ));
+                  if(grain_i == 2192)
+                  {
+                    std::cout<<"grain size = "<<get_volume_fractions_grains(cpo_index,data,mineral_i,grain_i)<<"\tsurface energy ="<<f_surface<<std::endl;
+                  }
                   set_surface_energy(cpo_index,data,mineral_i,grain_i,f_surface);
                   energy_ratio[grain_i] = strain_energy[grain_i]/f_surface;
                   mean_diameter +=  grain_size;
@@ -1785,6 +1816,7 @@ namespace aspect
             set_differential_stress(cpo_index,data,mineral_i,grain_i,mean_strain_energy);
           }
         
+        
         //std::cout<<"piezometer = "<<get_piezometer_mineral(cpo_index,data,mineral_i)<<std::endl;
          for (unsigned int grain_i = 0; grain_i < n_grains; ++grain_i)
           {
@@ -1802,7 +1834,7 @@ namespace aspect
                 {
                   if(this->get_timestep()!= 0)
                   {
-                    deriv_volume_fractions[grain_i] = (1.0/this->get_timestep()) * (volume_fraction_grain - mean_diameter);
+                    deriv_volume_fractions[grain_i] = k0 * exp(-1 * (activation_energy_growth + (pressure * activation_volume_growth))/(constants::gas_constant * temperature));
                   }
                   else
                   {
