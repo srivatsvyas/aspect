@@ -2208,16 +2208,19 @@ namespace aspect
           prm.enter_subsection ("Visco Plastic");
           {
              // Phase transition parameters
-             phase_function->initialize_simulator (this->get_simulator());
-             phase_function->parse_parameters (prm);
- 
+             phase_function = std::make_shared<MaterialModel::MaterialUtilities::PhaseFunction<dim>>();
+             phase_function->initialize_simulator(this->get_simulator());
+             phase_function->declare_parameters(prm);
+             phase_function->parse_parameters(prm);
+             
+ /*
              // Retrieve the list of composition names
              const std::vector<std::string> list_of_composition_names = this->introspection().get_composition_names();
  
              // Establish that a background field is required here
              const bool has_background_field = true;
  
-             thermal_diffusivities = Utilities::parse_map_to_double_array (prm.get("Thermal diffusivities"),
+            thermal_diffusivities = Utilities::parse_map_to_double_array (prm.get("Thermal diffusivities"),
                                                                            list_of_composition_names,
                                                                            has_background_field,
                                                                            "Thermal diffusivities");
@@ -2229,6 +2232,14 @@ namespace aspect
                                                                             has_background_field,
                                                                             "Thermal conductivities");
  
+ */
+           
+            rheology_vipl = std::make_shared<MaterialModel::Rheology::ViscoPlastic<dim>>();
+             rheology_vipl->initialize_simulator (this->get_simulator());
+             rheology_vipl->declare_parameters(prm);
+             rheology_vipl->parse_parameters(prm, std::make_unique<std::vector<unsigned int>>(phase_function->n_phases_for_each_composition()));
+             min_strain_rate = rheology_vipl->min_strain_rate;
+             
              rheology_diff = std::make_shared<MaterialModel::Rheology::DiffusionCreep<dim>>();
              rheology_diff->initialize_simulator (this->get_simulator());
              rheology_diff->parse_parameters(prm, std::make_unique<std::vector<unsigned int>>(phase_function->n_phases_for_each_composition()));
@@ -2237,11 +2248,24 @@ namespace aspect
              rheology_disl->initialize_simulator (this->get_simulator());
              rheology_disl->parse_parameters(prm, std::make_unique<std::vector<unsigned int>>(phase_function->n_phases_for_each_composition()));
  
-             rheology_vipl = std::make_shared<MaterialModel::Rheology::ViscoPlastic<dim>>();
-             rheology_vipl->initialize_simulator (this->get_simulator());
-             rheology_vipl->parse_parameters(prm, std::make_unique<std::vector<unsigned int>>(phase_function->n_phases_for_each_composition()));
-             min_strain_rate = rheology_vipl->min_strain_rate;
+            // Retrieve the list of composition names
+             const std::vector<std::string> list_of_composition_names = this->introspection().get_composition_names();
  
+             // Establish that a background field is required here
+             const bool has_background_field = true;
+ 
+            thermal_diffusivities = Utilities::parse_map_to_double_array (prm.get("Thermal diffusivities"),
+                                                                           list_of_composition_names,
+                                                                           has_background_field,
+                                                                           "Thermal diffusivities");
+ 
+             define_conductivities = prm.get_bool ("Define thermal conductivities");
+ 
+             thermal_conductivities = Utilities::parse_map_to_double_array (prm.get("Thermal conductivities"),
+                                                                            list_of_composition_names,
+                                                                            has_background_field,
+                                                                            "Thermal conductivities");
+              
           }
           prm.leave_subsection();
         }
