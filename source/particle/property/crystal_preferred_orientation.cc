@@ -152,9 +152,6 @@ namespace aspect
         // The rotation matrix is a direction cosine matrix, representing the orientation of the grain in the domain.
         // The fabric is determined later in the computations, so initialize it to -1.
 
-#ifndef ASPECT_WITH_WORLD_BUILDER
-        (void)position;
-#endif
         std::vector<double> deformation_type(n_minerals, -1.0);
         std::vector<double> bulk_recrystalized_grain_size(n_minerals, 0.0);
         std::vector<double> mean_grain_size(n_minerals);
@@ -226,6 +223,8 @@ namespace aspect
                 AssertThrow(false,
                             ExcMessage("The world builder was requested but not provided. Make sure that aspect is "
                                        "compiled with the World Builder and that you provide a world builder file in the input."));
+                // this is to avoid a warning about unused variables
+                (void)position;
 #endif
               }
             else
