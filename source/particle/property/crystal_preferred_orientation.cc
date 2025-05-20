@@ -1740,7 +1740,7 @@ namespace aspect
             double volume_fraction_grain = get_volume_fractions_grains(cpo_index,data,mineral_i,grain_i);
             if ((volume_fraction_grain != 0.0) && (rx_now[grain_i]) == false)
               {
-                if(energy_ratio[grain_i] > threshold_energy_ratio)
+                if(energy_ratio[grain_i] >= threshold_energy_ratio)
                 {
                   const double driving_force  = (mean_strain_energy - strain_energy[grain_i]);
                   deriv_volume_fractions[grain_i] = get_volume_fraction_mineral(cpo_index,data,mineral_i) *  drexpp_mobility[mineral_i] * driving_force;
