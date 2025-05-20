@@ -263,7 +263,6 @@ namespace aspect
                               const ArrayView<double> &data,
                               const unsigned int mineral_i,
                               const std::vector<double> &recrystalized_fraction,
-                              const std::vector<double> &piezometer,
                               const std::vector<Tensor<1,3>> &sgr_rotation_axis,
                               std::vector<bool> &rx_now) const;
 
@@ -289,7 +288,9 @@ namespace aspect
                                         const SymmetricTensor<2,3> &strain_rate_3d,
                                         const Tensor<2,3> &velocity_gradient_tensor,
                                         const std::array<double,4> ref_resolved_shear_stress,
-                                        const double temperature) const;
+                                        const double temperature,
+                                         const double rho_scale,
+                                        const double growth_rate) const;
 
 
           /**
