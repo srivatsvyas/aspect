@@ -808,7 +808,7 @@ namespace aspect
 
                       if ((this ->get_time() != 0 ) && (area_sum > 0.))
                       {
-                        if(ratio > 0)
+                        if(threshold_energy_ratio > 0)
                         {
                           if(std::abs(dt * (( numbers::PI * std::pow(vf_new* 0.5,2.))/area_sum) * derivatives.first[grain_i]) <= get_piezometer_mineral(cpo_index,data,mineral_i))  
                            {
@@ -831,7 +831,7 @@ namespace aspect
                           }
                         }
                         else
-                        if(ratio < 0)
+                        if(threshold_energy_ratio < 0)
                         {
                           const double area_fraction = (( numbers::PI * std::pow(vf_new* 0.5,2.))/area_sum);
                           const double increment_term = (dt * derivatives.first[grain_i]);
@@ -1740,15 +1740,13 @@ namespace aspect
             double volume_fraction_grain = get_volume_fractions_grains(cpo_index,data,mineral_i,grain_i);
             if ((volume_fraction_grain != 0.0) && (rx_now[grain_i]) == false)
               {
-                 const double driving_force  = (mean_strain_energy - strain_energy[grain_i]);
-                  deriv_volume_fractions[grain_i] = get_volume_fraction_mineral(cpo_index,data,mineral_i) *  drexpp_mobility[mineral_i] * driving_force;
-                if(energy_ratio[grain_i] > 1.)
+                if(energy_ratio[grain_i] > threshold_energy_ratio)
                 {
                   const double driving_force  = (mean_strain_energy - strain_energy[grain_i]);
                   deriv_volume_fractions[grain_i] = get_volume_fraction_mineral(cpo_index,data,mineral_i) *  drexpp_mobility[mineral_i] * driving_force;
                 }
                 else
-                if(energy_ratio[grain_i] < 1.0)
+                if(energy_ratio[grain_i] < threshold_energy_ratio)
                 {
                   if(this->get_timestep()!= 0)
                   {
@@ -2116,6 +2114,10 @@ namespace aspect
                 prm.declare_entry ("characteristic strain for dislocation density", "3.0",
                                     Patterns::List(Patterns::Double(0)),
                                     "This is intial grain size we choose to prescribe to Drex ++ ");
+                
+                prm.declare_entry ("threshold ratio", "1.0",
+                                    Patterns::List(Patterns::Double(0)),
+                                    "This is intial grain size we choose to prescribe to Drex ++ ");
           }
           prm.leave_subsection();
         }
@@ -2288,6 +2290,7 @@ namespace aspect
                 interfacial_energy = prm.get_double("Interfacial Energy");
                 initial_grain_size = prm.get_double("Initial grain size");
                 characteristic_strain = prm.get_double("characteristic strain for dislocation density");
+                threshold_energy_ratio = prm.get_double("threshold ratio");
               }
           prm.leave_subsection();
         

@@ -371,7 +371,7 @@ namespace aspect
                                                const ArrayView<double> &data,
                                                const unsigned int mineral_i) const
           {
-            return static_cast<DeformationType>(data[cpo_data_position + 0 + mineral_i * (n_grains * 32 + 3)]);
+            return static_cast<DeformationType>(data[cpo_data_position + 0 + mineral_i * (n_grains * 19 + 3)]);
           }
 
           /**
@@ -388,7 +388,7 @@ namespace aspect
                                     const unsigned int mineral_i,
                                     const DeformationType deformation_type) const
           {
-            data[cpo_data_position + 0 + mineral_i * (n_grains * 32 + 3)] = static_cast<double>(deformation_type);
+            data[cpo_data_position + 0 + mineral_i * (n_grains * 19 + 3)] = static_cast<double>(deformation_type);
           }
 
           /**
@@ -403,7 +403,7 @@ namespace aspect
                                              const ArrayView<double> &data,
                                              const unsigned int mineral_i) const
           {
-            return data[cpo_data_position + 1 + mineral_i *(n_grains * 32 + 3)];
+            return data[cpo_data_position + 1 + mineral_i *(n_grains * 19 + 3)];
           }
 
           /**
@@ -420,7 +420,7 @@ namespace aspect
                                            const unsigned int mineral_i,
                                            const double volume_fraction_mineral) const
           {
-            data[cpo_data_position + 1 + mineral_i *(n_grains * 32 + 3)] = volume_fraction_mineral;
+            data[cpo_data_position + 1 + mineral_i *(n_grains * 19 + 3)] = volume_fraction_mineral;
           }
 
           inline
@@ -428,7 +428,7 @@ namespace aspect
                                              const ArrayView<double> &data,
                                              const unsigned int mineral_i) const
           {
-            return data[cpo_data_position + 2 + mineral_i *(n_grains * 32 + 3)];
+            return data[cpo_data_position + 2 + mineral_i *(n_grains * 19 + 3)];
           }
 
           /**
@@ -445,7 +445,7 @@ namespace aspect
                                            const unsigned int mineral_i,
                                            const double piezometer) const
           {
-            data[cpo_data_position + 2 + mineral_i *(n_grains * 32 + 3)] = piezometer;
+            data[cpo_data_position + 2 + mineral_i *(n_grains * 19 + 3)] = piezometer;
           }
 
           /**
@@ -462,7 +462,7 @@ namespace aspect
                                              const unsigned int mineral_i,
                                              const unsigned int grain_i) const
           {
-            return data[cpo_data_position + 3 + grain_i * 32 + mineral_i * (n_grains * 32 + 3)];
+            return data[cpo_data_position + 3 + grain_i * 19 + mineral_i * (n_grains * 19 + 3)];
           }
 
           /**
@@ -481,7 +481,7 @@ namespace aspect
                                            const unsigned int grain_i,
                                            const double volume_fractions_grains) const
           {
-            data[cpo_data_position + 3 + grain_i * 32 + mineral_i * (n_grains * 32 + 3)] = volume_fractions_grains;
+            data[cpo_data_position + 3 + grain_i * 19 + mineral_i * (n_grains * 19 + 3)] = volume_fractions_grains;
           }
 
           /**
@@ -503,7 +503,7 @@ namespace aspect
             for (unsigned int i = 0; i < Tensor<2,3>::n_independent_components ; ++i)
               {
                 const dealii::TableIndices<2> index = Tensor<2,3>::unrolled_to_component_indices(i);
-                rotation_matrix[index] = data[cpo_data_position + 4 + grain_i * 32 + mineral_i * (n_grains * 32 + 3) + i];
+                rotation_matrix[index] = data[cpo_data_position + 4 + grain_i * 19 + mineral_i * (n_grains * 19 + 3) + i];
               }
             return rotation_matrix;
           }
@@ -527,7 +527,7 @@ namespace aspect
             for (unsigned int i = 0; i < Tensor<2,3>::n_independent_components ; ++i)
               {
                 const dealii::TableIndices<2> index = Tensor<2,3>::unrolled_to_component_indices(i);
-                data[cpo_data_position + 4 + grain_i * 32 + mineral_i * (n_grains * 32 + 3) + i] = rotation_matrix[index];
+                data[cpo_data_position + 4 + grain_i * 19 + mineral_i * (n_grains * 19 + 3) + i] = rotation_matrix[index];
               }
           }
 
@@ -545,7 +545,7 @@ namespace aspect
                                              const unsigned int mineral_i,
                                              const unsigned int grain_i) const
           {
-            return data[cpo_data_position + 13 + grain_i * 32 + mineral_i * (n_grains * 32 + 3)];
+            return data[cpo_data_position + 13 + grain_i * 19 + mineral_i * (n_grains * 19 + 3)];
           }
 
           /**
@@ -564,7 +564,7 @@ namespace aspect
                                            const unsigned int grain_i,
                                            const int grain_status) const
           {
-            data[cpo_data_position + 13 + grain_i * 32 + mineral_i * (n_grains * 32 + 3)] = grain_status;
+            data[cpo_data_position + 13 + grain_i * 19 + mineral_i * (n_grains * 19 + 3)] = grain_status;
           }
 
           /**
@@ -581,7 +581,7 @@ namespace aspect
                                              const unsigned int mineral_i,
                                              const unsigned int grain_i) const
           {
-            return data[cpo_data_position + 14 + grain_i * 32 + mineral_i * (n_grains * 32 + 3)];
+            return data[cpo_data_position + 14 + grain_i * 19 + mineral_i * (n_grains * 19 + 3)];
           }
 
           /**
@@ -600,7 +600,7 @@ namespace aspect
                                            const unsigned int grain_i,
                                            const double strain_accumulated) const
           {
-            data[cpo_data_position + 14 + grain_i * 32 + mineral_i * (n_grains * 32 + 3)] = strain_accumulated;
+            data[cpo_data_position + 14 + grain_i * 19 + mineral_i * (n_grains * 19 + 3)] = strain_accumulated;
           }
 
           /**
@@ -617,7 +617,7 @@ namespace aspect
                                              const unsigned int mineral_i,
                                              const unsigned int grain_i) const
           {
-            return data[cpo_data_position + 15 + grain_i * 32 + mineral_i * (n_grains * 32 + 3)];
+            return data[cpo_data_position + 15 + grain_i * 19 + mineral_i * (n_grains * 19 + 3)];
           }
 
           /**
@@ -636,7 +636,7 @@ namespace aspect
                                            const unsigned int grain_i,
                                            const double rx_fractions) const
           {
-            data[cpo_data_position + 15 + grain_i * 32 + mineral_i * (n_grains * 32 + 3)] = rx_fractions;
+            data[cpo_data_position + 15 + grain_i * 19 + mineral_i * (n_grains * 19 + 3)] = rx_fractions;
           }
 
           // After this, all properties stored to the cpo array is purely for the purpose of visualizing the evolution of different model parameters for verification and not needed for running the model
@@ -654,7 +654,7 @@ namespace aspect
                                              const unsigned int mineral_i,
                                              const unsigned int grain_i) const
           {
-            return data[cpo_data_position + 16 + grain_i * 32 + mineral_i * (n_grains * 32 + 3)];
+            return data[cpo_data_position + 16 + grain_i * 19 + mineral_i * (n_grains * 19 + 3)];
           }
 
           /**
@@ -673,7 +673,7 @@ namespace aspect
                                            const unsigned int grain_i,
                                            const int active_slip_system) const
           {
-            data[cpo_data_position + 16 + grain_i * 32 + mineral_i * (n_grains * 32 + 3)] = active_slip_system;
+            data[cpo_data_position + 16 + grain_i * 19 + mineral_i * (n_grains * 19 + 3)] = active_slip_system;
           }
           inline
           double get_strain_energy(const unsigned int cpo_data_position,
@@ -681,7 +681,7 @@ namespace aspect
                                              const unsigned int mineral_i,
                                              const unsigned int grain_i) const
           {
-            return data[cpo_data_position + 19 + grain_i * 32 + mineral_i * (n_grains * 32 + 3)];
+            return data[cpo_data_position + 17 + grain_i * 19 + mineral_i * (n_grains * 19 + 3)];
           }
 
           /**
@@ -700,7 +700,7 @@ namespace aspect
                                            const unsigned int grain_i,
                                            const double strain_energy) const
           {
-            data[cpo_data_position + 19 + grain_i * 32 + mineral_i * (n_grains * 32 + 3)] = strain_energy;
+            data[cpo_data_position + 17 + grain_i * 19 + mineral_i * (n_grains * 19 + 3)] = strain_energy;
           }
 
           inline
@@ -709,7 +709,7 @@ namespace aspect
                                              const unsigned int mineral_i,
                                              const unsigned int grain_i) const
           {
-            return data[cpo_data_position + 20 + grain_i * 32 + mineral_i * (n_grains * 32 + 3)];
+            return data[cpo_data_position + 18 + grain_i * 19 + mineral_i * (n_grains * 19 + 3)];
           }
 
           /**
@@ -728,7 +728,7 @@ namespace aspect
                                            const unsigned int grain_i,
                                            const double surface_energy) const
           {
-            data[cpo_data_position + 20 + grain_i * 32 + mineral_i * (n_grains * 32 + 3)] = surface_energy;
+            data[cpo_data_position + 18 + grain_i * 19 + mineral_i * (n_grains * 19 + 3)] = surface_energy;
           }
 
           inline
@@ -737,7 +737,7 @@ namespace aspect
                                              const unsigned int mineral_i,
                                              const unsigned int grain_i) const
           {
-            return data[cpo_data_position + 21 + grain_i * 32 + mineral_i * (n_grains * 32 + 3)];
+            return data[cpo_data_position + 19 + grain_i * 19 + mineral_i * (n_grains * 19 + 3)];
           }
 
           /**
@@ -756,7 +756,7 @@ namespace aspect
                                            const unsigned int grain_i,
                                            const double grain_boundary_velocity) const
           {
-            data[cpo_data_position + 21 + grain_i * 32 + mineral_i * (n_grains * 32 + 3)] = grain_boundary_velocity;
+            data[cpo_data_position + 19 + grain_i * 19 + mineral_i * (n_grains * 19 + 3)] = grain_boundary_velocity;
           }          
 
            /**
@@ -775,7 +775,7 @@ namespace aspect
                                               const unsigned int mineral_i,
                                               const unsigned int grain_i) const
            {
-             return data[cpo_data_position + 25 + grain_i * 32 + mineral_i * (n_grains * 32 + 3)];
+             return data[cpo_data_position + 20 + grain_i * 19 + mineral_i * (n_grains * 19 + 3)];
            }
  
            /**
@@ -794,7 +794,7 @@ namespace aspect
                                             const unsigned int grain_i,
                                             const double grain_size_change) const
            {
-             data[cpo_data_position + 25 + grain_i * 32 + mineral_i * (n_grains * 32 + 3)] = grain_size_change;
+             data[cpo_data_position + 20 + grain_i * 19 + mineral_i * (n_grains * 19 + 3)] = grain_size_change;
            }
 
           
@@ -804,7 +804,7 @@ namespace aspect
                                               const unsigned int mineral_i,
                                               const unsigned int grain_i) const
            {
-             return data[cpo_data_position + 26 + grain_i * 32 + mineral_i * (n_grains * 32 + 3)];
+             return data[cpo_data_position + 21 + grain_i * 19 + mineral_i * (n_grains * 19 + 3)];
            }
  
            /**
@@ -823,7 +823,7 @@ namespace aspect
                                             const unsigned int grain_i,
                                             const double dislocation_density) const
            {
-             data[cpo_data_position + 26 + grain_i * 32 + mineral_i * (n_grains * 32 + 3)] = dislocation_density;
+             data[cpo_data_position + 21 + grain_i * 19 + mineral_i * (n_grains * 19 + 3)] = dislocation_density;
            }
           
 
@@ -1003,7 +1003,7 @@ namespace aspect
           double avrami_slope_input;
           double initial_dislocation_density;
           double characteristic_strain;
-          
+          double threshold_energy_ratio;
 
       };
     }
