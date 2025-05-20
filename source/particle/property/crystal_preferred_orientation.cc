@@ -808,7 +808,7 @@ namespace aspect
 
                       if ((this ->get_time() != 0 ) && (area_sum > 0.))
                       {
-                        if(threshold_energy_ratio > 0)
+                        if(ratio > threshold_energy_ratio)
                         {
                           if(std::abs(dt * (( numbers::PI * std::pow(vf_new* 0.5,2.))/area_sum) * derivatives.first[grain_i]) <= get_piezometer_mineral(cpo_index,data,mineral_i))  
                            {
@@ -831,7 +831,7 @@ namespace aspect
                           }
                         }
                         else
-                        if(threshold_energy_ratio < 0)
+                        if(ratio < threshold_energy_ratio)
                         {
                           const double area_fraction = (( numbers::PI * std::pow(vf_new* 0.5,2.))/area_sum);
                           const double increment_term = (dt * derivatives.first[grain_i]);
@@ -1337,6 +1337,10 @@ namespace aspect
                     left_over_grain_size = 2.0 * std::pow((left_overs * (1.0/numbers::PI)),(1.0/2.0));
                   }
                 
+                if(n_recrystalized_grains > 1 )
+                {
+                  std::cout<<"No. of rx grains for grain "<<grain_i<<" = "<<n_recrystalized_grains<<std::endl;
+                }
                 double unrx_portion;
                 if(area != 0.)
                    unrx_portion = (area -(n_recrystalized_grains * rx_area)/area)*recrystalized_fraction[grain_i];
@@ -1453,7 +1457,7 @@ namespace aspect
         // time variables - timestep/time/time increment
         std::cout<<"strain rate = "<<std::sqrt(std::max(-second_invariant(strain_rate), 0.))<<std::endl; 
         const double t =this-> get_time();
-        const double timestep =this-> get_timestep();
+        const double dt =this-> get_timestep();
         
         const double non_dimensionalization = std::sqrt(std::max(-second_invariant(strain_rate), 0.));                
         // create output variables
@@ -1505,7 +1509,6 @@ namespace aspect
               
               bigI[slip_system_i] = scalar_product(slip_cross_product,strain_rate);
            }
-           
            if(bigI.norm() < 1e-30)
            {
             // The resolved shear strain rates are too small to induce significant slip. Therefore the magnitudes of \gamma and \omega will be negligible so we ignore the effect of rotaiton in this case
@@ -1541,11 +1544,6 @@ namespace aspect
              Assert(bigI[indices[0]] != 0.0, ExcMessage("Internal error: bigI is zero."));
              beta[indices[0]] = 1.0; // max q_abs, weak system (most deformation) "s=1"
 
-             Tensor<1,3> rx_slip_normal = slip_normal_reference[indices[0]];
-             Tensor<1,3> rx_slip_direction = slip_direction_reference[indices[0]];
-            
-             Tensor<3,1> rx_axis;
-
              // Calculating the cross product of the slip normal and slip direction to get the axis of rotation
              
              sgr_rotation_axis[grain_i] = transpose(get_rotation_matrix_grains(cpo_index,data,mineral_i,grain_i)) *  rx_reference[indices[0]];
@@ -1554,9 +1552,8 @@ namespace aspect
             
              for (unsigned int slip_system_i = 1; slip_system_i < 4-1; ++slip_system_i)
                {
-                  beta[indices[slip_system_i]] = std::pow(std::abs(ratio * (bigI[indices[slip_system_i]]/tau[indices[slip_system_i]])), drexpp_stress_exponent[mineral_i]);   
-                 
-                }
+                  beta[indices[slip_system_i]] = std::pow(std::abs(ratio * (bigI[indices[slip_system_i]]/tau[indices[slip_system_i]])), drexpp_stress_exponent[mineral_i]);       
+               }
              
              beta[indices.back()] = 0.0;
              
@@ -1618,7 +1615,7 @@ namespace aspect
              Tensor<2,3> local_strain_rate = (schmidt_tensor * gamma) - (Utilities::Tensors::levi_civita<3>()*spin_vectors[grain_i]);
              SymmetricTensor<2,3>d = symmetrize (local_strain_rate);
 
-             strain_increment[grain_i] = this->get_timestep() * std::sqrt(std::max(-second_invariant(d), 0.));
+             strain_increment[grain_i] = dt * std::sqrt(std::max(-second_invariant(d), 0.));
             
                           
              if(get_volume_fractions_grains(cpo_index,data,mineral_i,grain_i) > 0.)
@@ -1670,6 +1667,7 @@ namespace aspect
 
            }
         }
+
         // Calculating rx kinetics
         for (unsigned int grain_i = 0; grain_i < n_grains; ++grain_i)
           {
@@ -1706,25 +1704,20 @@ namespace aspect
         // Calculating mean strain energy
         double mean_strain_energy = 0.0;
         double sum_area = 0. ;
-        double number_grains = 0;
-        double mean_diameter =0.0;
-        double no_g = 0.0;
+ 
         for (unsigned int grain_i = 0; grain_i<n_grains; ++grain_i)
           {
-            if (this-> get_time()!= 0)
+            if (t != 0)
               {
                 const double grain_size = get_volume_fractions_grains(cpo_index,data,mineral_i,grain_i);
                 if ((grain_size > 0.) && (rx_now[grain_i] == false))
                 {
-                  number_grains += 1.0;
                   const double area = numbers::PI * std::pow(0.5 * grain_size,2.);
                   sum_area += area;
                   mean_strain_energy += (area * strain_energy[grain_i]);
                   const double f_surface = (3. * interfacial_energy*((2./get_volume_fractions_grains(cpo_index,data,mineral_i,grain_i)) ));
                   set_surface_energy(cpo_index,data,mineral_i,grain_i,f_surface);
                   energy_ratio[grain_i] = strain_energy[grain_i]/f_surface;
-                  mean_diameter +=  grain_size;
-                  no_g += 1;
                 }
               }
           }
@@ -1732,7 +1725,6 @@ namespace aspect
         if (sum_area !=0. )
         {
           mean_strain_energy = mean_strain_energy/sum_area;
-          mean_diameter = mean_diameter/no_g;
         }
         
         for (unsigned int grain_i = 0; grain_i < n_grains; ++grain_i)
@@ -1746,21 +1738,9 @@ namespace aspect
                   deriv_volume_fractions[grain_i] = get_volume_fraction_mineral(cpo_index,data,mineral_i) *  drexpp_mobility[mineral_i] * driving_force;
                 }
                 else
-                if(energy_ratio[grain_i] < threshold_energy_ratio)
                 {
-                  if(this->get_timestep()!= 0)
-                  {
-                    deriv_volume_fractions[grain_i] = growth_rate;
-                  } 
-                  else
-                  {
-                    deriv_volume_fractions[grain_i] = 0.;
-                  }
+                    deriv_volume_fractions[grain_i] = growth_rate; 
                 }    
-                else
-                {
-                  deriv_volume_fractions[grain_i] = 0.0;
-                }            
               }
             else
               {
