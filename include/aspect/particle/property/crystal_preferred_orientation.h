@@ -1001,8 +1001,6 @@ namespace aspect
           std::string input_orientation_file;
           double interfacial_energy;
           double avrami_slope_input;
-          double initial_dislocation_density;
-          double characteristic_strain;
           double threshold_energy_ratio;
 
       };
