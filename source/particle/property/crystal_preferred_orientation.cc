@@ -784,7 +784,10 @@ namespace aspect
 
               for (unsigned int grain_i = 0; grain_i < n_grains; ++grain_i)
                 {
+                  double strain_energy = get_strain_energy(cpo_index,data,mineral_i,grain_i);
+                  double surface_energy = get_surface_energy(cpo_index,data,mineral_i,grain_i);
                   double ratio;
+                  double grain_status = get_grain_status(cpo_index,data,mineral_i,grain_i);
                   if((this->get_time()!=0) && get_grain_status(cpo_index,data,mineral_i,grain_i)>= 0)
                   {
                     if(get_surface_energy(cpo_index,data,mineral_i,grain_i)!=0.0)
@@ -808,6 +811,8 @@ namespace aspect
 
                       if ((this ->get_time() != 0 ) && (area_sum > 0.))
                       {
+                        //if(ratio != 0.0)
+                        {
                         if(ratio > threshold_energy_ratio)
                         {
                           if(std::abs(dt * (( numbers::PI * std::pow(vf_new* 0.5,2.))/area_sum) * derivatives.first[grain_i]) <= get_piezometer_mineral(cpo_index,data,mineral_i))  
@@ -850,6 +855,7 @@ namespace aspect
                           break;
                         }
                       }
+                      }
                       else
                       {
                         vf_new = vf_new;
@@ -857,10 +863,11 @@ namespace aspect
                       }
                         
                       
-                      if(vf_new < 3 * std::pow(10,-6))
+                      if(vf_new <= 3 * std::pow(10,-6))
                       {
                         vf_new = 0.0;
                         set_grain_status(cpo_index,data,mineral_i,grain_i,-1);
+                        break;
                       }
                       Assert(std::isfinite(get_volume_fractions_grains(cpo_index,data,mineral_i,grain_i)),ExcMessage("volume_fractions[grain_i] is not finite. grain_i = "
                              + std::to_string(grain_i) + ", volume_fractions[grain_i] = " + std::to_string(get_volume_fractions_grains(cpo_index,data,mineral_i,grain_i))
@@ -1022,7 +1029,7 @@ namespace aspect
               }           
 
               set_piezometer_mineral(cpo_index,data,mineral_i,piezometer);
-
+              std::cout<<"\nDifferential stress at "<<ref_stress/1e6<<"MPa \t piezometer = "<<piezometer<<std::endl;
               const double activation_enthalpy_growth = (activation_energy_growth + (pressure * activation_volume_growth));
               const double exponent_term = -1.0 * activation_enthalpy_growth/(constants::gas_constant * temperature);
               const double growth_rate = k0 * exp(exponent_term);
@@ -1347,9 +1354,17 @@ namespace aspect
                 
                 set_rx_fractions(cpo_index,data,mineral_i,grain_i,unrx_portion);
                 set_volume_fractions_grains(cpo_index,data,mineral_i,grain_i,left_over_grain_size);
-                
-                boost::random::uniform_real_distribution<double> uniform_distribution1(-1.0 * numbers::PI/18,numbers::PI/18);
-                double random_angle = uniform_distribution1(this->random_number_generator);
+                const double deg2rad = 0.01745329;
+                double random_angle;
+                if(max_dispersion != 0.0)
+                {
+                  boost::random::uniform_real_distribution<double> uniform_distribution1(-1.0 * max_dispersion * deg2rad,max_dispersion * deg2rad);
+                  random_angle = uniform_distribution1(this->random_number_generator);
+                }
+                else
+                {
+                  random_angle = 0.0;
+                }
                 rotation_matrix = Utilities::rotation_matrix_from_axis(sgr_rotation_axis[grain_i],random_angle);
                 
 
@@ -2086,6 +2101,10 @@ namespace aspect
                 prm.declare_entry ("threshold ratio", "1.0",
                                     Patterns::List(Patterns::Double(0)),
                                     "This is intial grain size we choose to prescribe to Drex ++ ");
+                
+                prm.declare_entry ("max dispersion angle", "15",
+                                    Patterns::List(Patterns::Double(0)),
+                                    "This is intial grain size we choose to prescribe to Drex ++ ");
           }
           prm.leave_subsection();
         }
@@ -2258,6 +2277,7 @@ namespace aspect
                 interfacial_energy = prm.get_double("Interfacial Energy");
                 initial_grain_size = prm.get_double("Initial grain size");
                 threshold_energy_ratio = prm.get_double("threshold ratio");
+                max_dispersion = prm.get_double("max dispersion angle");
               }
           prm.leave_subsection();
         

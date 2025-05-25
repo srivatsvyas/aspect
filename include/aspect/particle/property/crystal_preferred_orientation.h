@@ -1002,7 +1002,7 @@ namespace aspect
           double interfacial_energy;
           double avrami_slope_input;
           double threshold_energy_ratio;
-
+          double max_dispersion;
       };
     }
   }
