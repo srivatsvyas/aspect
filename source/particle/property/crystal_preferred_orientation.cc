@@ -1666,7 +1666,12 @@ namespace aspect
                                                     std::pow(std::abs((beta[slip_system_i] * gamma)/non_dimensionalization),drexpp_exponent_p[mineral_i]/stress_exponent);
                     dislocation_density[grain_i] += rhos;                
                   }
-                  
+                
+                if(get_strain_accumulated(cpo_index,data,mineral_i,grain_i) < characteristic_strain)
+                {
+                  dislocation_density[grain_i] = (get_strain_accumulated(cpo_index,data,mineral_i,grain_i)/characteristic_strain) * dislocation_density[grain_i];
+                }
+                
                 strain_energy[grain_i] = 0.5 * dislocation_density[grain_i] * burgers_vector* burgers_vector * shear_modulus;
                 set_dislocation_density(cpo_index,data,mineral_i,grain_i,dislocation_density[grain_i]);
                 set_strain_energy(cpo_index,data,mineral_i,grain_i,strain_energy[grain_i]);
@@ -2102,6 +2107,10 @@ namespace aspect
                                     Patterns::List(Patterns::Double(0)),
                                     "This is intial grain size we choose to prescribe to Drex ++ ");
                 
+                prm.declare_entry ("characteristic strain", "1.0",
+                                    Patterns::List(Patterns::Double(0)),
+                                    "This is intial grain size we choose to prescribe to Drex ++ ");
+                
                 prm.declare_entry ("max dispersion angle", "15",
                                     Patterns::List(Patterns::Double(0)),
                                     "This is intial grain size we choose to prescribe to Drex ++ ");
@@ -2277,6 +2286,7 @@ namespace aspect
                 interfacial_energy = prm.get_double("Interfacial Energy");
                 initial_grain_size = prm.get_double("Initial grain size");
                 threshold_energy_ratio = prm.get_double("threshold ratio");
+                threshold_energy_ratio = prm.get_double("characteristic strain");
                 max_dispersion = prm.get_double("max dispersion angle");
               }
           prm.leave_subsection();

@@ -1003,6 +1003,7 @@ namespace aspect
           double avrami_slope_input;
           double threshold_energy_ratio;
           double max_dispersion;
+          double characteristic_strain;
       };
     }
   }
