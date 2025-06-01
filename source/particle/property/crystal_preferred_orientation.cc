@@ -167,7 +167,7 @@ namespace aspect
         std::vector<std::vector<double >>grain_boundary_velocity(n_minerals);
         std::vector<std::vector<double >>grain_size_change(n_minerals);
         std::vector<std::vector<double >>dislocation_density(n_minerals);
-        
+        std::cout<<"Model is being initialized now at timestep "<<this->get_timestep()<<std::endl;
         for (unsigned int mineral_i = 0; mineral_i < n_minerals; ++mineral_i)
           {
             volume_fractions_grains[mineral_i].resize(n_grains);
@@ -262,7 +262,10 @@ namespace aspect
                           volume_fractions_grains[mineral_i][grain_i] = distribution(this->random_number_generator);
                         }
                       }
-                      volume_fractions_grains[mineral_i][grain_i] = initial_grain_size;
+                      else
+                      {
+                        volume_fractions_grains[mineral_i][grain_i] = initial_grain_size;
+                      }
                       grain_status[mineral_i][grain_i]= 0;
                     }
                     else
@@ -301,26 +304,18 @@ namespace aspect
                       dislocation_density[mineral_i][grain_i] =0.;
                   }
                   
+                  int grains  = 0;
+                  double sum_grain_size = 0.0;
                   // Calculating the mean grain size for the mineral phase in question
-                  for(unsigned int grain_i = 0; grain_i < n_grains; ++grain_i)
+                  for(unsigned int grain_i = 0; grain_i < n_grains_init; ++grain_i)
                   {
-                    int grains  = 0;
-                    double sum_grain_size = 0.0;
-
-                    if(volume_fractions_grains[mineral_i][grain_i] > 0.)
-                    {
-                      sum_grain_size = +volume_fractions_grains[mineral_i][grain_i];
-                      grains += 1;
-                    }
-                    if (grains!= 0)
-                    {
-                      mean_grain_size[mineral_i] = sum_grain_size/grains;
-                    }
-                    else
-                    {
-                      mean_grain_size[mineral_i] = 0.0;
-                    }
+                    sum_grain_size += volume_fractions_grains[mineral_i][grain_i];
+                    grains += 1;
+                    
                   }
+                  std::cout<<"mean grain size = "<<sum_grain_size<<"\tno. of grains = "<<grains<<std::endl;
+                  mean_grain_size[mineral_i] = sum_grain_size/grains;
+                  std::cout<<"mean grain size = "<<mean_grain_size[mineral_i]<<std::endl;
                 }
                 else
                 {
@@ -378,8 +373,7 @@ namespace aspect
                     data.emplace_back(grain_boundary_velocity[mineral_i][grain_i]);
                     data.emplace_back(grain_size_change[mineral_i][grain_i]);
                     data.emplace_back(dislocation_density[mineral_i][grain_i]);
-                  
-              }
+                }
             
           }
       }
@@ -420,6 +414,7 @@ namespace aspect
                  strain_rate);
 
             const double pressure = inputs.solution[p][this->introspection().component_indices.pressure];
+            std::cout<<"pressure = "<<pressure/1e6<<std::endl;
             const double temperature = inputs.solution[p][this->introspection().component_indices.temperature];
             const double water_content = inputs.solution[p][this->introspection().component_indices.compositional_fields[water_index]];
 
@@ -948,7 +943,11 @@ namespace aspect
 
               const std::array<double,4> ref_resolved_shear_stress = reference_resolved_shear_stress_from_deformation_type(deformation_type);
               
-              // now compute the normal viscosity to be able to computes the stress
+              double differential_stress;
+
+              if(this->get_time() !=0)
+              {
+                // now compute the normal viscosity to be able to computes the stress
               // Create the material model inputs and outputs to
               // retrieve the current viscosity.
               std::cout<<"mean grain size for mineral = "<<get_mean_grain_size_mineral(cpo_index,data,mineral_i)<<std::endl;
@@ -963,7 +962,7 @@ namespace aspect
 
               MaterialModel::MaterialModelOutputs<dim> out(1,
                                                            this->n_compositional_fields());
-
+              
               this->get_material_model().evaluate(in, out);
 
               // Compressive stress is positive in geoscience applications.
@@ -979,23 +978,34 @@ namespace aspect
 
               // Compute the deviatoric stress tensor after elastic stresses were added.
               const SymmetricTensor<2, dim> deviatoric_stress = deviator(stress);
-
+              const std::array< double, dim > eigenvalues = dealii::eigenvalues(deviatoric_stress);
+               differential_stress = eigenvalues[0]-eigenvalues[dim-1];
+              }
+              else
+              {
+                differential_stress = 0.;
+              }
+              
               // Compute the second moment invariant of the deviatoric stress
               // in the same way as the second moment invariant of the deviatoric
               // strain rate is computed in the viscoplastic material model.
               // TODO check that this is valid for the compressible case.
               //const double stress_invariant = (std::sqrt(std::max(-second_invariant(deviatoric_stress), 0.)));
 
-              const std::array< double, dim > eigenvalues = dealii::eigenvalues(deviatoric_stress);
-              double differential_stress = eigenvalues[0]-eigenvalues[dim-1];
+              
 
               // SV: For now Im declaring only the bulk_recrystalization grain_size using the piezometer;
               std::array<double, 2> A = {{0.015,std::pow(10,3.8)}};
               std::array<double, 2> m = {{-1.33, -1.28}};
+              double piezometer;
               
               for(unsigned int i =0; i < n_minerals; ++i)
               {
-                const double piezometer = A[mineral_i] * std::pow(differential_stress/1e6,m[mineral_i]);
+                if(differential_stress != 0.)
+                 piezometer= A[mineral_i] * std::pow(differential_stress/1e6,m[mineral_i]);
+                else
+                 piezometer = 0.5;
+                
                 set_bulk_recrystalization_grain_size_mineral(cpo_index,data,mineral_i,piezometer);
               }
 
@@ -2037,6 +2047,26 @@ namespace aspect
           prm.leave_subsection();
         }
         prm.leave_subsection();
+          prm.enter_subsection("Material model");
+        {
+          prm.enter_subsection ("Visco Plastic");
+          {
+             MaterialModel::MaterialUtilities::PhaseFunction<dim>::declare_parameters(prm);
+              prm.declare_entry ("Thermal diffusivities", "1e-6",
+                                   Patterns::List(Patterns::Double(0)),
+                                   "This is intial grain size we choose to prescribe to Drex ++ ");
+              
+              prm.declare_entry ("Define thermal conductivities", "false",           
+                                  Patterns::Bool(),
+                                  "This is intial grain size we choose to prescribe to Drex ++ ");
+              
+              prm.declare_entry ("Thermal conductivities", "1e-6",           
+                                  Patterns::List(Patterns::Double(0)),
+                                  "This is intial grain size we choose to prescribe to Drex ++ ");
+          }
+          prm.leave_subsection();
+        }
+        prm.leave_subsection();
       }
 
 
@@ -2213,7 +2243,7 @@ namespace aspect
              phase_function->declare_parameters(prm);
              phase_function->parse_parameters(prm);
              
- /*
+
              // Retrieve the list of composition names
              const std::vector<std::string> list_of_composition_names = this->introspection().get_composition_names();
  
@@ -2232,39 +2262,22 @@ namespace aspect
                                                                             has_background_field,
                                                                             "Thermal conductivities");
  
- */
+                                                                            
            
             rheology_vipl = std::make_shared<MaterialModel::Rheology::ViscoPlastic<dim>>();
              rheology_vipl->initialize_simulator (this->get_simulator());
              rheology_vipl->declare_parameters(prm);
-             rheology_vipl->parse_parameters(prm, std::make_unique<std::vector<unsigned int>>(phase_function->n_phases_for_each_composition()));
+             rheology_vipl->parse_parameters(prm, std::make_unique<std::vector<unsigned int>>(phase_function->n_phases_for_each_chemical_composition()));
              min_strain_rate = rheology_vipl->min_strain_rate;
              
              rheology_diff = std::make_shared<MaterialModel::Rheology::DiffusionCreep<dim>>();
              rheology_diff->initialize_simulator (this->get_simulator());
-             rheology_diff->parse_parameters(prm, std::make_unique<std::vector<unsigned int>>(phase_function->n_phases_for_each_composition()));
+             rheology_diff->parse_parameters(prm, std::make_unique<std::vector<unsigned int>>(phase_function->n_phases_for_each_chemical_composition()));
  
              rheology_disl = std::make_shared<MaterialModel::Rheology::DislocationCreep<dim>>();
              rheology_disl->initialize_simulator (this->get_simulator());
-             rheology_disl->parse_parameters(prm, std::make_unique<std::vector<unsigned int>>(phase_function->n_phases_for_each_composition()));
- 
-            // Retrieve the list of composition names
-             const std::vector<std::string> list_of_composition_names = this->introspection().get_composition_names();
- 
-             // Establish that a background field is required here
-             const bool has_background_field = true;
- 
-            thermal_diffusivities = Utilities::parse_map_to_double_array (prm.get("Thermal diffusivities"),
-                                                                           list_of_composition_names,
-                                                                           has_background_field,
-                                                                           "Thermal diffusivities");
- 
-             define_conductivities = prm.get_bool ("Define thermal conductivities");
- 
-             thermal_conductivities = Utilities::parse_map_to_double_array (prm.get("Thermal conductivities"),
-                                                                            list_of_composition_names,
-                                                                            has_background_field,
-                                                                            "Thermal conductivities");
+             rheology_disl->parse_parameters(prm, std::make_unique<std::vector<unsigned int>>(phase_function->n_phases_for_each_chemical_composition()));
+
               
           }
           prm.leave_subsection();
