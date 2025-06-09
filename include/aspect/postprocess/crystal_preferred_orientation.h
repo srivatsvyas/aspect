@@ -108,7 +108,7 @@ namespace aspect
          */
         enum class Output
         {
-          VolumeFraction, RotationMatrix, EulerAngles, GrainStatus, StrainAccumulated, RxStatus, ActiveSS, StrainRate, DifferentialStress, StrainEnergy, SurfaceEnergy, GBMVelocity, NRxGrains, PreRxSize, PostRxSize, GrainSizeChange, DislocationDensity, not_found
+          VolumeFraction, RotationMatrix, EulerAngles, GrainStatus, StrainrateRatio, ViscosityRatio, RxFraction, ActiveSS, StrainRate, DifferentialStress, StrainEnergy, SurfaceEnergy, GBMVelocity, GrainSizeChange, DislocationDensity, StrainAccumulated, not_found
         };
 
         /**

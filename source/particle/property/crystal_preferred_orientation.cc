@@ -167,6 +167,8 @@ namespace aspect
         std::vector<std::vector<double >>grain_boundary_velocity(n_minerals);
         std::vector<std::vector<double >>grain_size_change(n_minerals);
         std::vector<std::vector<double >>dislocation_density(n_minerals);
+        std::vector<std::vector<double >>strain_accumulated(n_minerals);
+        
         std::cout<<"Model is being initialized now at timestep "<<this->get_timestep()<<std::endl;
         for (unsigned int mineral_i = 0; mineral_i < n_minerals; ++mineral_i)
           {
@@ -184,6 +186,8 @@ namespace aspect
             grain_boundary_velocity[mineral_i].resize(n_grains);
             grain_size_change[mineral_i].resize(n_grains);
             dislocation_density[mineral_i].resize(n_grains);
+            strain_accumulated[mineral_i].resize(n_grains);
+
             // This will be set by the initial grain subsection.
             if (initial_grains_model == CPOInitialGrainsModel::world_builder)
               {
@@ -302,6 +306,7 @@ namespace aspect
                       grain_boundary_velocity[mineral_i][grain_i] = 0.;
                       grain_size_change[mineral_i][grain_i]= 0.;
                       dislocation_density[mineral_i][grain_i] =0.;
+                      strain_accumulated[mineral_i][grain_i] =0.;
                   }
                   
                   int grains  = 0;
@@ -341,6 +346,7 @@ namespace aspect
                       grain_boundary_velocity[mineral_i][grain_i] = 0.;
                       grain_size_change[mineral_i][grain_i]= 0.;
                       dislocation_density[mineral_i][grain_i] =0.;
+                      strain_accumulated[mineral_i][grain_i] =0.;
                     }
                 }
                 
@@ -373,6 +379,7 @@ namespace aspect
                     data.emplace_back(grain_boundary_velocity[mineral_i][grain_i]);
                     data.emplace_back(grain_size_change[mineral_i][grain_i]);
                     data.emplace_back(dislocation_density[mineral_i][grain_i]);
+                    data.emplace_back(strain_accumulated[mineral_i][grain_i]);
                 }
             
           }
@@ -414,7 +421,6 @@ namespace aspect
                  strain_rate);
 
             const double pressure = inputs.solution[p][this->introspection().component_indices.pressure];
-            std::cout<<"pressure = "<<pressure/1e6<<std::endl;
             const double temperature = inputs.solution[p][this->introspection().component_indices.temperature];
             const double water_content = inputs.solution[p][this->introspection().component_indices.compositional_fields[water_index]];
 
@@ -622,7 +628,7 @@ namespace aspect
             property_information.emplace_back("cpo mineral " + std::to_string(mineral_i) + " type",1);
             property_information.emplace_back("cpo mineral " + std::to_string(mineral_i) + " volume fraction",1);
             property_information.emplace_back("cpo mineral " + std::to_string(mineral_i) + " bulk recrystalized grain size",1);
-            property_information.emplace_back("cpo mineral " + std::to_string(mineral_i) + " mean grain size",1);
+            property_information.emplace_back("cpo mineral " + std::to_string(mineral_i) + " grain size",1);
 
             for (unsigned int grain_i = 0; grain_i < n_grains; ++grain_i)
               {
@@ -645,6 +651,7 @@ namespace aspect
                 property_information.emplace_back("cpo mineral " + std::to_string(mineral_i) + " grain " + std::to_string(grain_i) + " grain boundary velocity",1);
                 property_information.emplace_back("cpo mineral " + std::to_string(mineral_i) + " grain " + std::to_string(grain_i) + " grain size change",1);
                 property_information.emplace_back("cpo mineral " + std::to_string(mineral_i) + " grain " + std::to_string(grain_i) + " dislocation density",1);
+                property_information.emplace_back("cpo mineral " + std::to_string(mineral_i) + " grain " + std::to_string(grain_i) + " strain accumulated",1);
               }
           }
 
@@ -940,24 +947,22 @@ namespace aspect
                                                                                   water_content);
 
               set_deformation_type(cpo_index,data,mineral_i,deformation_type);
-
+              std::cout<<"cpo index = "<<cpo_index<<std::endl;
               const std::array<double,4> ref_resolved_shear_stress = reference_resolved_shear_stress_from_deformation_type(deformation_type);
               
               double differential_stress;
 
-              if(this->get_time() !=0)
-              {
                 // now compute the normal viscosity to be able to computes the stress
               // Create the material model inputs and outputs to
               // retrieve the current viscosity.
-              std::cout<<"mean grain size for mineral = "<<get_mean_grain_size_mineral(cpo_index,data,mineral_i)<<std::endl;
+              
               MaterialModel::MaterialModelInputs<dim> in = MaterialModel::MaterialModelInputs<dim>(1,compositions.size());
               in.pressure[0] = pressure;
               in.temperature[0] = temperature;
               in.position[0] = position;
               in.strain_rate[0] = strain_rate;
               in.composition[0] = compositions;
-              
+
               in.requested_properties = MaterialModel::MaterialProperties::viscosity;
 
               MaterialModel::MaterialModelOutputs<dim> out(1,
@@ -979,13 +984,9 @@ namespace aspect
               // Compute the deviatoric stress tensor after elastic stresses were added.
               const SymmetricTensor<2, dim> deviatoric_stress = deviator(stress);
               const std::array< double, dim > eigenvalues = dealii::eigenvalues(deviatoric_stress);
-               differential_stress = eigenvalues[0]-eigenvalues[dim-1];
-              }
-              else
-              {
-                differential_stress = 0.;
-              }
+              differential_stress = eigenvalues[0]-eigenvalues[dim-1];
               
+              std::cout<<"differential stress = "<<differential_stress<<std::endl;
               // Compute the second moment invariant of the deviatoric stress
               // in the same way as the second moment invariant of the deviatoric
               // strain rate is computed in the viscoplastic material model.
@@ -1004,7 +1005,7 @@ namespace aspect
                 if(differential_stress != 0.)
                  piezometer= A[mineral_i] * std::pow(differential_stress/1e6,m[mineral_i]);
                 else
-                 piezometer = 0.5;
+                 piezometer = 1.0;
                 
                 set_bulk_recrystalization_grain_size_mineral(cpo_index,data,mineral_i,piezometer);
               }

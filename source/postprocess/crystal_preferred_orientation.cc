@@ -276,16 +276,20 @@ namespace aspect
                     string_stream_content_raw << "mineral_" << write_raw_cpo[property_i].first << "_grain_status" << " ";
                     break;
                   
-                  case Output::StrainAccumulated:
-                    string_stream_content_raw << "mineral_" << write_raw_cpo[property_i].first << "_strain_accumulated" << " ";
+                  case Output::StrainrateRatio:
+                    string_stream_content_raw << "mineral_" << write_raw_cpo[property_i].first << "_strainrate_ratio" << " ";
+                    break;
+                  
+                  case Output::ViscosityRatio:
+                    string_stream_content_raw << "mineral_" << write_raw_cpo[property_i].first << "_viscosity_ratio" << " ";
                     break;
                   
                   case Output::ActiveSS:
                     string_stream_content_raw << "mineral_" << write_raw_cpo[property_i].first << "_active_slip_system" << " ";
                     break;
                   
-                  case Output::RxStatus:
-                    string_stream_content_raw << "mineral_" << write_raw_cpo[property_i].first << "_rx_fractions" << " ";
+                  case Output::RxFraction:
+                    string_stream_content_raw << "mineral_" << write_raw_cpo[property_i].first << "_rx_fraction" << " ";
                     break;  
                   
                   case Output::StrainRate:
@@ -315,7 +319,11 @@ namespace aspect
                   case Output::DislocationDensity:
                     string_stream_content_raw << "mineral_" << write_raw_cpo[property_i].first << "_dislocation_density" << " ";
                     break;
-
+                  
+                  case Output::StrainAccumulated:
+                    string_stream_content_raw << "mineral_" << write_raw_cpo[property_i].first << "_strain_accumulated" << " ";
+                    break;
+                                    
                   default:
                     Assert(false, ExcMessage("Internal error: raw CPO postprocess case not found."));
                     break;
@@ -355,20 +363,24 @@ namespace aspect
                                                                 << "mineral_" << write_draw_volume_weighted_cpo[property_i].first << "_EA_z" << " ";
                     break;
                   
-                   case Output::GrainStatus:
+                  case Output::GrainStatus:
                     string_stream_content_draw_volume_weighting << "mineral_" << write_raw_cpo[property_i].first << "_grain_status" << " ";
                     break;
                   
-                  case Output::StrainAccumulated:
-                    string_stream_content_draw_volume_weighting << "mineral_" << write_raw_cpo[property_i].first << "_strain_accumulated" << " ";
+                  case Output::StrainrateRatio:
+                    string_stream_content_draw_volume_weighting << "mineral_" << write_raw_cpo[property_i].first << "_strainrate_ratio" << " ";
+                    break;
+                  
+                  case Output::ViscosityRatio:
+                    string_stream_content_draw_volume_weighting << "mineral_" << write_raw_cpo[property_i].first << "_viscosity_ratio" << " ";
                     break;
                   
                   case Output::ActiveSS:
                     string_stream_content_draw_volume_weighting << "mineral_" << write_raw_cpo[property_i].first << "_active_slip_system" << " ";
                     break;
                   
-                  case Output::RxStatus:
-                    string_stream_content_draw_volume_weighting << "mineral_" << write_raw_cpo[property_i].first << "_rx_fractions" << " ";
+                  case Output::RxFraction:
+                    string_stream_content_draw_volume_weighting << "mineral_" << write_raw_cpo[property_i].first << "_rx_fraction" << " ";
                     break;  
                   
                   case Output::StrainRate:
@@ -397,6 +409,10 @@ namespace aspect
                   
                   case Output::DislocationDensity:
                     string_stream_content_draw_volume_weighting << "mineral_" << write_raw_cpo[property_i].first << "_dislocation_density" << " ";
+                    break;
+                  
+                  case Output::StrainAccumulated:
+                    string_stream_content_draw_volume_weighting << "mineral_" << write_raw_cpo[property_i].first << "_strain_accumulated" << " ";
                     break;
                   
                   default:
@@ -500,7 +516,7 @@ namespace aspect
                                                       <<  euler_angles[write_raw_cpo[property_i].first][grain][2] << " ";
                             break;
                           
-                            case Output::GrainStatus:
+                          case Output::GrainStatus:
                             string_stream_content_raw << cpo_particle_property.get_grain_status(
                                                         cpo_data_position,
                                                         properties,
@@ -508,8 +524,16 @@ namespace aspect
                                                         grain) << " ";
                             break;
                           
-                          case Output::StrainAccumulated:
-                            string_stream_content_raw<< cpo_particle_property.get_strain_accumulated(
+                          case Output::StrainrateRatio:
+                            string_stream_content_raw << cpo_particle_property.get_strain_rate_ratio(
+                                                        cpo_data_position,
+                                                        properties,
+                                                        write_raw_cpo[property_i].first,
+                                                        grain) << " ";
+                            break;
+                          
+                          case Output::ViscosityRatio:
+                            string_stream_content_raw << cpo_particle_property.get_viscosity_ratio(
                                                         cpo_data_position,
                                                         properties,
                                                         write_raw_cpo[property_i].first,
@@ -524,7 +548,7 @@ namespace aspect
                                                         grain) << " ";
                             break;
                           
-                          case Output::RxStatus:
+                          case Output::RxFraction:
                             string_stream_content_raw << cpo_particle_property.get_rx_fractions(
                                                         cpo_data_position,
                                                         properties,
@@ -582,6 +606,14 @@ namespace aspect
                           
                           case Output::DislocationDensity:
                           string_stream_content_raw << cpo_particle_property.get_dislocation_density(
+                                                        cpo_data_position,
+                                                        properties,
+                                                        write_raw_cpo[property_i].first,
+                                                        grain) << " ";
+                            break;
+                          
+                          case Output::StrainAccumulated:
+                            string_stream_content_raw<< cpo_particle_property.get_strain_accumulated(
                                                         cpo_data_position,
                                                         properties,
                                                         write_raw_cpo[property_i].first,
@@ -664,8 +696,16 @@ namespace aspect
                                                         grain) << " ";
                             break;
                           
-                          case Output::StrainAccumulated:
-                            string_stream_content_draw_volume_weighting << cpo_particle_property.get_strain_accumulated(
+                          case Output::StrainrateRatio:
+                            string_stream_content_draw_volume_weighting << cpo_particle_property.get_strain_rate_ratio(
+                                                        cpo_data_position,
+                                                        properties,
+                                                        write_draw_volume_weighted_cpo[property_i].first,
+                                                        grain) << " ";
+                            break;
+                          
+                          case Output::ViscosityRatio:
+                            string_stream_content_draw_volume_weighting << cpo_particle_property.get_viscosity_ratio(
                                                         cpo_data_position,
                                                         properties,
                                                         write_draw_volume_weighted_cpo[property_i].first,
@@ -680,7 +720,7 @@ namespace aspect
                                                         grain) << " ";
                             break;
                           
-                          case Output::RxStatus:
+                          case Output::RxFraction:
                             string_stream_content_draw_volume_weighting << cpo_particle_property.get_rx_fractions(
                                                         cpo_data_position,
                                                         properties,
@@ -743,8 +783,16 @@ namespace aspect
                                                         write_draw_volume_weighted_cpo[property_i].first,
                                                         grain) << " ";
                             break;
-
-                            default:
+                          
+                          case Output::StrainAccumulated:
+                            string_stream_content_draw_volume_weighting << cpo_particle_property.get_strain_accumulated(
+                                                        cpo_data_position,
+                                                        properties,
+                                                        write_draw_volume_weighted_cpo[property_i].first,
+                                                        grain) << " ";
+                            break;
+                          
+                          default:
                             Assert(false, ExcMessage("Internal error: raw CPO postprocess case not found."));
                             break;
                         }
@@ -862,40 +910,38 @@ namespace aspect
     CrystalPreferredOrientation<dim>::string_to_output_enum(const std::string &string)
     {
       // olivine volume fraction, olivine rotation matrix, olivine Euler angles, enstatite volume fraction, enstatite rotation matrix, enstatite Euler angles
-      if (string == "volume fraction")
+      if (string == "Volume fraction")
         return Output::VolumeFraction;
-      if (string == "rotation matrix")
+      if (string == "Rotation matrix")
         return Output::RotationMatrix;
       if (string == "Euler angles")
         return Output::EulerAngles;
       if (string == "Grain status")
         return Output::GrainStatus;
-      if (string == "Strain accumulated")
-        return Output::StrainAccumulated;
+      if (string == "Strain rate Ratio")
+        return Output::StrainrateRatio;
+      if (string == "Viscosity Ratio")
+        return Output::ViscosityRatio;
       if (string == "Recrystalization fraction")
-        return Output::RxStatus;
+        return Output::RxFraction;
       if (string == "Active slip system")
         return Output::ActiveSS;
+      if (string == "Strain rate")
+        return Output::StrainRate;
       if (string == "Differential stress")
         return Output::DifferentialStress;
-      if (string == "Slip rate")
-        return Output::StrainRate;
       if (string == "Strain energy")
         return Output::StrainEnergy;
       if (string == "Surface energy")
         return Output::SurfaceEnergy;
       if (string == "Grain boundary velocity")
         return Output::GBMVelocity;
-      if (string == "NRx grains")
-        return Output::NRxGrains;
-      if (string == "Pre Rx Size")
-        return Output::PreRxSize;
-      if (string == "Post Rx Size")
-        return Output::PostRxSize;
       if (string == "Grain Size Change")
         return Output::GrainSizeChange;        
       if (string == "Dislocation density")
         return Output::DislocationDensity;
+      if (string == "Strain accumulated")
+        return Output::StrainAccumulated;
       else
         return Output::not_found;
     }
