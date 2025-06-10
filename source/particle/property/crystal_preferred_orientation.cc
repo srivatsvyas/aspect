@@ -935,7 +935,6 @@ namespace aspect
             }
             case CPODerivativeAlgorithm::drexpp:
             {
-              const double pressure = 1.0e9; // SV - Have to make this react with the position of the particle in question
               const DeformationType deformation_type = determine_deformation_type(deformation_type_selector[mineral_i],
                                                                                   position,
                                                                                   temperature,
@@ -947,7 +946,6 @@ namespace aspect
                                                                                   water_content);
 
               set_deformation_type(cpo_index,data,mineral_i,deformation_type);
-              std::cout<<"cpo index = "<<cpo_index<<std::endl;
               const std::array<double,4> ref_resolved_shear_stress = reference_resolved_shear_stress_from_deformation_type(deformation_type);
               
               double differential_stress;
@@ -955,13 +953,13 @@ namespace aspect
                 // now compute the normal viscosity to be able to computes the stress
               // Create the material model inputs and outputs to
               // retrieve the current viscosity.
-              
               MaterialModel::MaterialModelInputs<dim> in = MaterialModel::MaterialModelInputs<dim>(1,compositions.size());
               in.pressure[0] = pressure;
               in.temperature[0] = temperature;
               in.position[0] = position;
               in.strain_rate[0] = strain_rate;
               in.composition[0] = compositions;
+              
 
               in.requested_properties = MaterialModel::MaterialProperties::viscosity;
 
@@ -986,7 +984,7 @@ namespace aspect
               const std::array< double, dim > eigenvalues = dealii::eigenvalues(deviatoric_stress);
               differential_stress = eigenvalues[0]-eigenvalues[dim-1];
               
-              std::cout<<"differential stress = "<<differential_stress<<std::endl;
+             
               // Compute the second moment invariant of the deviatoric stress
               // in the same way as the second moment invariant of the deviatoric
               // strain rate is computed in the viscoplastic material model.
@@ -996,8 +994,8 @@ namespace aspect
               
 
               // SV: For now Im declaring only the bulk_recrystalization grain_size using the piezometer;
-              std::array<double, 2> A = {{0.015,std::pow(10,3.8)}};
-              std::array<double, 2> m = {{-1.33, -1.28}};
+              std::array<double, 2> A = {{0.015,std::pow(10,5.01)}};
+              std::array<double, 2> m = {{-1.33, -1.96}};
               double piezometer;
               
               for(unsigned int i =0; i < n_minerals; ++i)
@@ -1009,6 +1007,65 @@ namespace aspect
                 
                 set_bulk_recrystalization_grain_size_mineral(cpo_index,data,mineral_i,piezometer);
               }
+
+              // 
+              const double gravity_norm = this->get_gravity_model().gravity_vector(position).norm();
+              const double reference_density = (this->get_adiabatic_conditions().is_initialized())
+                                               ?
+                                               this->get_adiabatic_conditions().density(position)
+                                               :
+                                               3300.;
+              
+              MaterialModel::MaterialUtilities::PhaseFunctionInputs<dim> phase_inputs(temperature,
+                                                                                      pressure,
+                                                                                      this->get_geometry_model().depth(position),
+                                                                                      gravity_norm * reference_density,
+                                                                                      numbers::invalid_unsigned_int);
+              
+              std::vector<double> phase_function_values(phase_function->n_phase_transitions(),0.0);
+
+              //Compute the value of phase functions
+
+              for(unsigned int j = 0 ; j < phase_function->n_phase_transitions(); ++j)
+              {
+                phase_inputs.phase_index = j;
+                phase_function_values[j] = phase_function->compute_value(phase_inputs);
+              }
+
+              const std::vector<double> volume_fractions = MaterialModel::MaterialUtilities::compute_composition_fractions(compositions);
+
+              std::vector<double> diffusion_pre_strainrate(volume_fractions.size(),std::numeric_limits<double>::quiet_NaN());
+              std::vector<double> diffusion_grain_size_exponent(volume_fractions.size(),std::numeric_limits<double>::quiet_NaN());
+              std::vector<double> dislocation_strainrate(volume_fractions.size(),std::numeric_limits<double>::quiet_NaN());
+
+              for(unsigned int composition = 0; composition < volume_fractions.size(); ++composition)
+              {
+                const MaterialModel::Rheology::DiffusionCreepParameters p_dif = rheology_diff->compute_creep_parameters(composition,
+                                                                                                                        phase_function_values,
+                                                                                                                        phase_function->n_phase_transitions_for_each_composition());
+                
+                diffusion_pre_strainrate[composition] = p_dif.prefactor * std::pow(differential_stress,p_dif.stress_exponent) *
+                                                        std::exp((p_dif.activation_energy +
+                                                                  pressure * p_dif.activation_volume)/
+                                                                  (constants::gas_constant * temperature));
+                
+                diffusion_grain_size_exponent[composition] = p_dif.grain_size_exponent;
+
+                const MaterialModel::Rheology::DislocationCreepParameters p_dis = rheology_disl->compute_creep_parameters(composition,
+                                                                                                                         phase_function_values,
+                                                                                                                         phase_function->n_phase_transitions_for_each_composition());
+                
+                dislocation_strainrate[composition] = p_dis.prefactor * std::pow(differential_stress, p_dis.stress_exponent) *
+                                                      std::exp((p_dis.activation_energy +
+                                                                  pressure * p_dis.activation_volume)/
+                                                                  (constants::gas_constant * temperature));
+              }
+
+              const double diffusion_pre_strain_rate = MaterialModel::MaterialUtilities::average_value(volume_fractions, diffusion_pre_strainrate,MaterialModel::MaterialUtilities::harmonic);
+              const double diffusion_grain_exponent = MaterialModel::MaterialUtilities::average_value(volume_fractions, diffusion_grain_size_exponent,MaterialModel::MaterialUtilities::harmonic);
+              const double dislocation_strain_rate = MaterialModel::MaterialUtilities::average_value(volume_fractions, dislocation_strainrate,MaterialModel::MaterialUtilities::harmonic);
+
+              std::cout<<"diffusion pre strain rate = "<<diffusion_pre_strain_rate<<"\t grain size exponent = "<<diffusion_grain_exponent<<"\t dislocation strain rate = "<<dislocation_strain_rate<<std::endl;
 
               return compute_derivatives_drexpp(cpo_index,
                                                    data,

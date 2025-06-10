@@ -138,7 +138,6 @@ namespace aspect
         // get grain size 
         const unsigned int grain_size_index = this->introspection().compositional_index_for_name("grain_size");
         const double grain_size = in.composition[i][grain_size_index];
-        std::cout<<"grain size = "<<grain_size_index<<std::endl;
 
         // Calculate viscosities for each of the individual compositional phases
         for (unsigned int j=0; j < volume_fractions.size(); ++j)
