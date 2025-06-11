@@ -994,20 +994,22 @@ namespace aspect
               
 
               // SV: For now Im declaring only the bulk_recrystalization grain_size using the piezometer;
-              std::array<double, 2> A = {{0.015,std::pow(10,5.01)}};
+              std::array<double, 2> A = {{0.015,1.0/2369.0}};
               std::array<double, 2> m = {{-1.33, -1.96}};
               double piezometer;
               
-              for(unsigned int i =0; i < n_minerals; ++i)
+              for(unsigned int i =0; i < n_minerals; i++)
               {
                 if(differential_stress != 0.)
-                 piezometer= A[mineral_i] * std::pow(differential_stress/1e6,m[mineral_i]);
+                 {
+                  piezometer= A[mineral_i] * std::pow(differential_stress/1e6,m[mineral_i]);
+                 }
                 else
                  piezometer = 1.0;
                 
                 set_bulk_recrystalization_grain_size_mineral(cpo_index,data,mineral_i,piezometer);
               }
-
+              
               // 
               const double gravity_norm = this->get_gravity_model().gravity_vector(position).norm();
               const double reference_density = (this->get_adiabatic_conditions().is_initialized())
@@ -1031,41 +1033,22 @@ namespace aspect
                 phase_inputs.phase_index = j;
                 phase_function_values[j] = phase_function->compute_value(phase_inputs);
               }
+              
+              double diffusion_pre_strainrate;
+              double diffusion_grain_size_exponent;
 
-              const std::vector<double> volume_fractions = MaterialModel::MaterialUtilities::compute_composition_fractions(compositions);
-
-              std::vector<double> diffusion_pre_strainrate(volume_fractions.size(),std::numeric_limits<double>::quiet_NaN());
-              std::vector<double> diffusion_grain_size_exponent(volume_fractions.size(),std::numeric_limits<double>::quiet_NaN());
-              std::vector<double> dislocation_strainrate(volume_fractions.size(),std::numeric_limits<double>::quiet_NaN());
-
-              for(unsigned int composition = 0; composition < volume_fractions.size(); ++composition)
+              for(unsigned int composition = 1; composition < compositions.size(); ++composition)
               {
                 const MaterialModel::Rheology::DiffusionCreepParameters p_dif = rheology_diff->compute_creep_parameters(composition,
                                                                                                                         phase_function_values,
                                                                                                                         phase_function->n_phase_transitions_for_each_composition());
                 
-                diffusion_pre_strainrate[composition] = p_dif.prefactor * std::pow(differential_stress,p_dif.stress_exponent) *
-                                                        std::exp((p_dif.activation_energy +
+                diffusion_pre_strainrate = p_dif.prefactor * std::pow(differential_stress,p_dif.stress_exponent) *
+                                                        std::exp(-1. * (p_dif.activation_energy +
                                                                   pressure * p_dif.activation_volume)/
                                                                   (constants::gas_constant * temperature));
-                
-                diffusion_grain_size_exponent[composition] = p_dif.grain_size_exponent;
-
-                const MaterialModel::Rheology::DislocationCreepParameters p_dis = rheology_disl->compute_creep_parameters(composition,
-                                                                                                                         phase_function_values,
-                                                                                                                         phase_function->n_phase_transitions_for_each_composition());
-                
-                dislocation_strainrate[composition] = p_dis.prefactor * std::pow(differential_stress, p_dis.stress_exponent) *
-                                                      std::exp((p_dis.activation_energy +
-                                                                  pressure * p_dis.activation_volume)/
-                                                                  (constants::gas_constant * temperature));
+                diffusion_grain_size_exponent = p_dif.grain_size_exponent;
               }
-
-              const double diffusion_pre_strain_rate = MaterialModel::MaterialUtilities::average_value(volume_fractions, diffusion_pre_strainrate,MaterialModel::MaterialUtilities::harmonic);
-              const double diffusion_grain_exponent = MaterialModel::MaterialUtilities::average_value(volume_fractions, diffusion_grain_size_exponent,MaterialModel::MaterialUtilities::harmonic);
-              const double dislocation_strain_rate = MaterialModel::MaterialUtilities::average_value(volume_fractions, dislocation_strainrate,MaterialModel::MaterialUtilities::harmonic);
-
-              std::cout<<"diffusion pre strain rate = "<<diffusion_pre_strain_rate<<"\t grain size exponent = "<<diffusion_grain_exponent<<"\t dislocation strain rate = "<<dislocation_strain_rate<<std::endl;
 
               return compute_derivatives_drexpp(cpo_index,
                                                    data,
@@ -1073,6 +1056,8 @@ namespace aspect
                                                    strain_rate_3d,
                                                    velocity_gradient_tensor,
                                                    ref_resolved_shear_stress,
+                                                   diffusion_pre_strainrate,
+                                                   diffusion_grain_size_exponent,
                                                    temperature);
               break;
             }
@@ -1475,6 +1460,8 @@ namespace aspect
                                                                       const SymmetricTensor<2,3> &strain_rate,
                                                                       const Tensor<2,3> &velocity_gradient_tensor,
                                                                       const std::array<double,4> ref_resolved_shear_stress,
+                                                                      const double diffusion_pre_strainrate,
+                                                                      const double diffusion_grain_size_exponent,
                                                                       const double temperature
                                                                       ) const
       {
@@ -1512,22 +1499,7 @@ namespace aspect
         // Constants -> the values below are for olivine alone (SV: Do I add the citations?)
         const double shear_modulus = 8.0 * std::pow(10.0,10.0);
         const double burgers_vector = 5.0 * std::pow(10.0,-10.0);
-
-        /*
-          Because the piezometer is isotropic, I declared and created the piezometer here
-        */
-        std::array<double, 2> A = {{0.015,std::pow(10,3.8)}};
-        std::array<double, 2> m = {{-1.33, -1.28}};
         
-        /* 
-           Constants for the calculation of rheology. These are hardcoded values of olivine & pyroxene rheology (see supplementary material Dannberg et al, 2017)
-        */
-        const double pressure = 1e9;
-        const double pre_exponential_dis = 8.33 * std::pow(10,-17);
-        const double exponent_dis = 3.5;
-        const double activation_energy_dis = 5.3 * std::pow(10,5);
-        const double activation_volume_dis = 1.4 * std::pow(10,-5);
-
         // first compute the amount of slip, G, strain accumulated and dislocation density for n_grains, as long as grain is initialized, i.e grain size is not equal to 0
         for(unsigned int grain_i = 0; grain_i < n_grains; ++grain_i)
         {
