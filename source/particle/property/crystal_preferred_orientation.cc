@@ -318,9 +318,9 @@ namespace aspect
                     grains += 1;
                     
                   }
-                  std::cout<<"mean grain size = "<<sum_grain_size<<"\tno. of grains = "<<grains<<std::endl;
+                  
                   mean_grain_size[mineral_i] = sum_grain_size/grains;
-                  std::cout<<"mean grain size = "<<mean_grain_size[mineral_i]<<std::endl;
+                  
                 }
                 else
                 {
@@ -759,29 +759,15 @@ namespace aspect
           case CPODerivativeAlgorithm::drexpp:
             {
               double sum_of_volumes = 0;
-              int n_grains_considered = 0;
               double sum_area = 0;
-              double sum_grain_size;
+             
               Tensor<2,3> cosine_ref;
 
               for (unsigned int grain_i = 0; grain_i < n_grains; ++grain_i)
                 {
                   sum_area +=  numbers::PI * std::pow(get_volume_fractions_grains(cpo_index,data,mineral_i,grain_i)* 0.5,2.0);
-                  if(get_volume_fractions_grains(cpo_index,data,mineral_i,grain_i)>0.)
-                  {
-                    sum_grain_size += get_volume_fractions_grains(cpo_index,data,mineral_i,grain_i);
-                    n_grains_considered += 1;
-                  }
+
                 }
-              
-              if(n_grains_considered > 0)
-              {
-                 set_mean_grain_size_mineral_mineral(cpo_index,data,mineral_i,(sum_grain_size/n_grains_considered));
-              } 
-              else
-              {
-                 set_mean_grain_size_mineral_mineral(cpo_index,data,mineral_i,0.);
-              }
 
               for (unsigned int grain_i = 0; grain_i < n_grains; ++grain_i)
                 {
@@ -830,10 +816,11 @@ namespace aspect
                         If any grain shrinks below a certain threshold, the grain is assumed to be consumed by other growing grains and the slot is assigned a grain size of 0 and grain status of -1, allowing the slot to participate in dynamic recrystallization.
                       */ 
 
-                      if(vf_new < 3 * std::pow(10,-6))
+                      if(vf_new < 0.5 * std::pow(10,-6))
                       {
                         vf_new = 0.0;
                         set_grain_status(cpo_index,data,mineral_i,grain_i,-1);
+                        break;
                       }
 
                       Assert(std::isfinite(get_volume_fractions_grains(cpo_index,data,mineral_i,grain_i)),ExcMessage("volume_fractions[grain_i] is not finite. grain_i = "
@@ -872,6 +859,27 @@ namespace aspect
                   set_rotation_matrix_grains(cpo_index,data,mineral_i,grain_i,cosine_new);
 
                 }
+              
+              double sum_grain_size;
+              int n_grains_considered;
+              for(unsigned int i_grain = 0; i_grain < n_grains; ++i_grain)
+              {
+                 if(get_volume_fractions_grains(cpo_index,data,mineral_i,i_grain)>0.)
+                  {
+                    sum_grain_size += get_volume_fractions_grains(cpo_index,data,mineral_i,i_grain);
+                    n_grains_considered += 1;
+                  }
+              }
+
+              if(n_grains_considered > 0)
+              {
+                 set_mean_grain_size_mineral_mineral(cpo_index,data,mineral_i,(sum_grain_size/n_grains_considered));
+              } 
+              else
+              {
+                 set_mean_grain_size_mineral_mineral(cpo_index,data,mineral_i,0.);
+              }
+               
               Assert(sum_of_volumes != 0, ExcMessage("The sum of all grain volume fractions of a mineral is equal to zero. This should not happen."));
               return sum_of_volumes;
               break;
@@ -994,15 +1002,16 @@ namespace aspect
               
 
               // SV: For now Im declaring only the bulk_recrystalization grain_size using the piezometer;
-              std::array<double, 2> A = {{0.015,1.0/2369.0}};
-              std::array<double, 2> m = {{-1.33, -1.96}};
+              std::array<double, 2> A = {{std::pow(10,4.18),std::pow(10.0,3.8)}};
+              std::array<double, 2> m = {{-1.33, -1.28}};
               double piezometer;
               
               for(unsigned int i =0; i < n_minerals; i++)
               {
                 if(differential_stress != 0.)
                  {
-                  piezometer= A[mineral_i] * std::pow(differential_stress/1e6,m[mineral_i]);
+                  piezometer= (A[mineral_i] * std::pow(differential_stress/1e6,m[mineral_i]))*std::pow(10,-6);
+                  std::cout<<"\nmineral_i = "<<mineral_i<<"\tpiezometer = "<<piezometer<<"\tdifferential_stress = "<<differential_stress/1e6<<std::endl;
                  }
                 else
                  piezometer = 1.0;
@@ -1036,6 +1045,8 @@ namespace aspect
               
               double diffusion_pre_strainrate;
               double diffusion_grain_size_exponent;
+              double dislocation_factor;
+              double dislocation_stress_exponent;
 
               for(unsigned int composition = 1; composition < compositions.size(); ++composition)
               {
@@ -1047,6 +1058,16 @@ namespace aspect
                                                                   pressure * p_dif.activation_volume)/
                                                                   (constants::gas_constant * temperature));
                 diffusion_grain_size_exponent = p_dif.grain_size_exponent;
+                
+                const MaterialModel::Rheology::DislocationCreepParameters p_dis = rheology_disl->compute_creep_parameters(composition,
+                                                                                                                        phase_function_values,
+                                                                                                                        phase_function->n_phase_transitions_for_each_composition());
+                
+                dislocation_factor = p_dis.prefactor * std::exp(-1. * (p_dis.activation_energy +
+                                                                  pressure * p_dis.activation_volume)/
+                                                                  (constants::gas_constant * temperature));
+                
+                dislocation_stress_exponent = p_dis.stress_exponent;
               }
 
               return compute_derivatives_drexpp(cpo_index,
@@ -1058,6 +1079,8 @@ namespace aspect
                                                    diffusion_pre_strainrate,
                                                    deviatoric_stress,
                                                    diffusion_grain_size_exponent,
+                                                   dislocation_factor,
+                                                   dislocation_stress_exponent,
                                                    deviatoric_strain_rate,
                                                    temperature);
               break;
@@ -1287,7 +1310,6 @@ namespace aspect
                                          const ArrayView<double> &data,
                                          const unsigned int mineral_i,
                                          const std::vector<double> &recrystalized_fraction,
-                                         const std::vector<double> &piezometer,
                                          std::vector<bool> &rx_now) const
       {
         
@@ -1332,13 +1354,13 @@ namespace aspect
             const double grain_size = get_volume_fractions_grains(cpo_index,data,mineral_i,grain_i);
            
             const double volume =  numbers::PI * std::pow(grain_size * 0.5 , 2.0);
-            const double rx_volume =  numbers::PI * std::pow(piezometer[grain_i] * 0.5 , 2.0);
+            const double rx_volume =  numbers::PI * std::pow(get_bulk_recrystalization_grain_size_mineral(cpo_index,data,mineral_i) * 0.5 , 2.0);
 
             Tensor<2,3> rotation_matrix ;
             int n_recrystalized_grains; 
             double replaced_grain_volume;
 
-            if((volume >= 2. * rx_volume)&&(piezometer[grain_i] > 0.))
+            if((volume >= 2. * rx_volume)&&(get_bulk_recrystalization_grain_size_mineral(cpo_index,data,mineral_i) > 0.))
               {
                 n_recrystalized_grains = (std::floor(recrystalized_fraction[grain_i] * (volume/rx_volume)));
                
@@ -1353,7 +1375,7 @@ namespace aspect
             
              if(n_recrystalized_grains >= 1.)
               {
-                if(left_over_grain_size < piezometer[grain_i])
+                if(left_over_grain_size < get_bulk_recrystalization_grain_size_mineral(cpo_index,data,mineral_i))
                   {
                     n_recrystalized_grains += -1;
                     left_overs = volume - (n_recrystalized_grains * rx_volume);
@@ -1372,7 +1394,7 @@ namespace aspect
                     for (unsigned int recrystalize_grain_i = 0; recrystalize_grain_i < n_recrystalized_grains  ; ++recrystalize_grain_i)
                       {
                         int random_var = std::rand() % permutation_vector.size();
-                        set_volume_fractions_grains(cpo_index,data,mineral_i,permutation_vector[random_var],piezometer[grain_i]);
+                        set_volume_fractions_grains(cpo_index,data,mineral_i,permutation_vector[random_var],get_bulk_recrystalization_grain_size_mineral(cpo_index,data,mineral_i));
                         this->compute_random_rotation_matrix(rotation_matrix);
                         set_rotation_matrix_grains(cpo_index,data,mineral_i,permutation_vector[random_var],rotation_matrix * parent_orientation * transpose(rotation_matrix));            
                         set_grain_status(cpo_index,data,mineral_i,permutation_vector[random_var],1);
@@ -1382,12 +1404,12 @@ namespace aspect
                   }
                 else
                   {
-                    if( empty_buffer_vector.size() >= n_recrystalized_grains)
+                    if( empty_buffer_vector.size() >= buffer_vector_counter+ n_recrystalized_grains)
                      {
                        for (unsigned int recrystalize_grain_i = 0; recrystalize_grain_i < n_recrystalized_grains  ; ++recrystalize_grain_i)
                          {
                           int random_var = std::rand() % empty_buffer_vector.size();
-                          set_volume_fractions_grains(cpo_index,data,mineral_i,empty_buffer_vector[random_var],piezometer[grain_i]);
+                          set_volume_fractions_grains(cpo_index,data,mineral_i,empty_buffer_vector[random_var],get_bulk_recrystalization_grain_size_mineral(cpo_index,data,mineral_i));
                           this->compute_random_rotation_matrix(rotation_matrix);
                           set_rotation_matrix_grains(cpo_index,data,mineral_i,empty_buffer_vector[random_var],rotation_matrix * parent_orientation * transpose(rotation_matrix));            
                           set_grain_status(cpo_index,data,mineral_i,empty_buffer_vector[random_var],2);
@@ -1397,7 +1419,7 @@ namespace aspect
                      } 
                     else
                      {
-                      if(buffer_vector_counter == n_grains_buffer)
+                      if(buffer_vector_counter+n_recrystalized_grains >= n_grains_buffer)
                        {
                           std::sort(buffer_vector.begin(), buffer_vector.end(),
                              [&](std::size_t grain_i, std::size_t grain_j)
@@ -1436,7 +1458,7 @@ namespace aspect
                         }         
                       for (unsigned int recrystalize_grain_i = 0; recrystalize_grain_i < n_recrystalized_grains  ; ++recrystalize_grain_i)
                         {
-                          set_volume_fractions_grains(cpo_index,data,mineral_i,buffer_vector[buffer_vector_counter],piezometer[grain_i]);
+                          set_volume_fractions_grains(cpo_index,data,mineral_i,buffer_vector[buffer_vector_counter],get_bulk_recrystalization_grain_size_mineral(cpo_index,data,mineral_i));
                           this->compute_random_rotation_matrix(rotation_matrix);
                           set_rotation_matrix_grains(cpo_index,data,mineral_i,buffer_vector[buffer_vector_counter],rotation_matrix * parent_orientation * transpose(rotation_matrix));            
                           set_grain_status(cpo_index,data,mineral_i,buffer_vector[buffer_vector_counter],4);
@@ -1464,6 +1486,8 @@ namespace aspect
                                                                       const double diffusion_pre_strainrate,
                                                                       const SymmetricTensor<2,dim> &deviatoric_stress,
                                                                       const double diffusion_grain_size_exponent,
+                                                                      const double dislocation_factor,
+                                                                      const double dislocation_stress_exponent,
                                                                       const SymmetricTensor<2,dim> &deviatoric_strain_rate,
                                                                       const double temperature) const
       {
@@ -1483,7 +1507,7 @@ namespace aspect
         
         // create shorcuts
         const std::array<double, 4> &tau = ref_resolved_shear_stress;
-        std::vector<Tensor<2,3>> dislocation_strain_rate_3d(n_grains);
+        std::vector<SymmetricTensor<2,3>> dislocation_strain_rate_3d(n_grains);
         std::vector<Tensor<2,3>> dislocation_velocity_gradient_3d(n_grains);
 
         // Calculation of strain rate tensor and velocity gradient tensor for dislocation creep
@@ -1497,18 +1521,18 @@ namespace aspect
           // even in 2d we need 3d strain-rates and velocity gradient tensors. So we make them 3d by
           // adding an extra dimension which is zero.
           
-          dislocation_strain_rate_3d[0][0] = dislocation_strain_rate[0][0];
-          dislocation_strain_rate_3d[0][1] = dislocation_strain_rate[0][1];
+          dislocation_strain_rate_3d[i_grain][0][0] = dislocation_strain_rate[0][0];
+          dislocation_strain_rate_3d[i_grain][0][1] = dislocation_strain_rate[0][1];
             //sym: strain_rate_3d[1][0] = strain_rate[1][0];
-          dislocation_strain_rate_3d[1][1] = dislocation_strain_rate[1][1];
+          dislocation_strain_rate_3d[i_grain][1][1] = dislocation_strain_rate[1][1];
 
             if (dim == 3)
               {
-                dislocation_strain_rate_3d[0][2] = dislocation_strain_rate[0][2];
-                dislocation_strain_rate_3d[1][2] = dislocation_strain_rate[1][2];
+                dislocation_strain_rate_3d[i_grain][0][2] = dislocation_strain_rate[0][2];
+                dislocation_strain_rate_3d[i_grain][1][2] = dislocation_strain_rate[1][2];
                 //sym: strain_rate_3d[2][0] = strain_rate[0][2];
                 //sym: strain_rate_3d[2][1] = strain_rate[1][2];
-                dislocation_strain_rate_3d[2][2] = dislocation_strain_rate[2][2];
+                dislocation_strain_rate_3d[i_grain][2][2] = dislocation_strain_rate[2][2];
               }
           
           const Tensor<2,dim> diffusion_velocity_gradient_tensor = diffusion_strain_rate;
@@ -1528,6 +1552,10 @@ namespace aspect
               }
             
           dislocation_velocity_gradient_3d[i_grain] = velocity_gradient_tensor - diffusion_velocity_gradient_3d;
+          if(t != 0)
+            set_strain_rate_ratio(cpo_index,data,mineral_i,i_grain,std::sqrt(std::max(-second_invariant(dislocation_strain_rate_3d[i_grain]), 0.)/ std::max(-second_invariant(strain_rate), 0.)));
+          else 
+            set_strain_rate_ratio(cpo_index,data,mineral_i,i_grain,0);
         }
 
         // Variables that I will store for the purpose of benchmarking model behavior and will have to make them local variables before trying to merge with ASPECT
@@ -1677,14 +1705,11 @@ namespace aspect
               {
                 const double non_dimensionalization = std::sqrt(std::max(-second_invariant(strain_rate), 0.));                
                 double rho_scale;
-                const double ref_stress = 1e10;//std::pow(non_dimensionalization/(pre_exponential_dis * exp(-1. * (activation_energy_dis + (activation_volume_dis * pressure))/(constants::gas_constant * temperature))),1./3.5);
+                const double ref_stress = std::pow(non_dimensionalization/dislocation_factor,1.0/dislocation_stress_exponent);
                
                 rho_scale = std::pow(ref_stress /(0.5 * shear_modulus * burgers_vector),drexpp_exponent_p[mineral_i]);
                 
-                if(this->get_time() != 0)
-                  piezometer[grain_i] =5e-6;//A[mineral_i] * std::pow(ref_stress/1e6,m[mineral_i]);
-                else
-                  piezometer[grain_i] = 0.5;
+  
                 
                 set_differential_stress(cpo_index,data,mineral_i,grain_i,ref_stress);
 
@@ -1700,8 +1725,15 @@ namespace aspect
                                                     std::pow(std::abs(e_s/non_dimensionalization),drexpp_exponent_p[mineral_i]/stress_exponent);
 
                     dislocation_density[grain_i] += rhos;
-                    strain_energy[grain_i] += 0.5 *  rhos * burgers_vector* burgers_vector * shear_modulus;
                   }
+                
+                if(get_strain_accumulated(cpo_index,data,mineral_i,grain_i) >= 3.0)
+                  dislocation_density[grain_i] = dislocation_density[grain_i];
+                else 
+                  dislocation_density[grain_i] = (get_strain_accumulated(cpo_index,data,mineral_i,grain_i)/3.0) * dislocation_density[grain_i];
+                
+                strain_energy[grain_i] = shear_modulus * burgers_vector * burgers_vector * dislocation_density[grain_i];
+
                 set_dislocation_density(cpo_index,data,mineral_i,grain_i,dislocation_density[grain_i]);
                 set_strain_energy(cpo_index,data,mineral_i,grain_i,strain_energy[grain_i]);
               }
@@ -1736,7 +1768,6 @@ namespace aspect
                                   data,
                                   mineral_i,
                                   recrystalized_fractions,
-                                  piezometer,
                                   rx_now);
         
         
@@ -1774,11 +1805,8 @@ namespace aspect
             double volume_fraction_grain = get_volume_fractions_grains(cpo_index,data,mineral_i,grain_i);
             if ((volume_fraction_grain != 0.0) && (rx_now[grain_i]) == false)
               {
-                const double f_surface = (interfacial_energy*((2./get_volume_fractions_grains(cpo_index,data,mineral_i,grain_i)) ));
-                set_surface_energy(cpo_index,data,mineral_i,grain_i,f_surface);
-
                 const double f_strain  = (mean_strain_energy - strain_energy[grain_i]);
-                const double driving_force = f_strain + f_surface;
+                const double driving_force = f_strain;
                 
                 // Different than D-Rex. Here we actually only compute the derivative and do not multiply it with the volume_fractions. We do that when we advect.
                 deriv_volume_fractions[grain_i] = get_volume_fraction_mineral(cpo_index,data,mineral_i) *  drexpp_mobility[mineral_i] * driving_force;                

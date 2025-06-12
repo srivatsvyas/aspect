@@ -268,7 +268,6 @@ namespace aspect
                               const ArrayView<double> &data,
                               const unsigned int mineral_i,
                               const std::vector<double> &recrystalized_fraction,
-                              const std::vector<double> &piezometer,
                               std::vector<bool> &rx_now) const;
 
           /**
@@ -296,6 +295,8 @@ namespace aspect
                                         const double diffusion_pre_strainrate,
                                         const SymmetricTensor<2,dim> &deviatoric_stress,
                                         const double diffusion_grain_size_exponent,
+                                        const double dislocation_factor,
+                                        const double dislocation_stress_exponent,
                                         const SymmetricTensor<2,dim> &deviatoric_strain_rate,
                                         const double temperature) const;
 
