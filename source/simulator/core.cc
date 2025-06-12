@@ -200,6 +200,7 @@ namespace aspect
                      TimerOutput::never,
                      TimerOutput::wall_times),
     total_walltime_until_last_snapshot(0.),
+    last_checkpoint_id (numbers::invalid_unsigned_int),
     initial_topography_model(InitialTopographyModel::create_initial_topography_model<dim>(prm)),
     geometry_model (GeometryModel::create_geometry_model<dim>(prm)),
     // make sure the parameters object gets a chance to
@@ -2016,14 +2017,14 @@ namespace aspect
                                         parameters.initial_adaptive_refinement;
     pre_refinement_step = 0;
 
-    // shall we start at id=0 when not resuming??
-
     // if we want to resume a computation from an earlier point
     // then reload it from a snapshot. otherwise do the basic
     // start-up
     if (parameters.resume_computation == true)
       {
         last_checkpoint_id = determine_last_good_snapshot();
+        AssertThrow(last_checkpoint_id != numbers::invalid_unsigned_int,
+                    ExcMessage("You requested to restart the simulation from the last checkpoint but no written checkpoint has been found."));
 
         resume_from_snapshot();
         // we need to remove additional_refinement_times that are in the past
@@ -2039,6 +2040,7 @@ namespace aspect
       }
     else
       {
+        // This will cause the next checkpoint to be written to be 01:
         last_checkpoint_id = 0;
 
         time = parameters.start_time;
