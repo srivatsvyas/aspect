@@ -294,7 +294,9 @@ namespace aspect
                                         const Tensor<2,3> &velocity_gradient_tensor,
                                         const std::array<double,4> ref_resolved_shear_stress,
                                         const double diffusion_pre_strainrate,
+                                        const SymmetricTensor<2,dim> &deviatoric_stress,
                                         const double diffusion_grain_size_exponent,
+                                        const SymmetricTensor<2,dim> &deviatoric_strain_rate,
                                         const double temperature) const;
 
 
