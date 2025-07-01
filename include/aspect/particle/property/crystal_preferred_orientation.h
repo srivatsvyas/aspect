@@ -298,6 +298,7 @@ namespace aspect
                                         const double dislocation_factor,
                                         const double dislocation_stress_exponent,
                                         const SymmetricTensor<2,dim> &deviatoric_strain_rate,
+                                        const double growth_rate,
                                         const double temperature) const;
 
 

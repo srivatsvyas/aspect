@@ -758,19 +758,21 @@ namespace aspect
           }
           case CPODerivativeAlgorithm::drexpp:
             {
-              double sum_of_volumes = 0;
-              double sum_area = 0;
-             
+              double area_sum = 0;
+              double sum_volume_fractions = 0;
+              double  sum_of_volumes = 0.;
               Tensor<2,3> cosine_ref;
 
               for (unsigned int grain_i = 0; grain_i < n_grains; ++grain_i)
                 {
-                  sum_area +=  numbers::PI * std::pow(get_volume_fractions_grains(cpo_index,data,mineral_i,grain_i)* 0.5,2.0);
-
+                  //std::cout<<"grain size of grain "<<grain_i<<" = "<<get_volume_fractions_grains(cpo_index,data,mineral_i,grain_i)<<"\t position = "<<cpo_index + 3 + grain_i * 32 + mineral_i * (n_grains * 32 + 2)<<std::endl;
+                  area_sum += numbers::PI * std::pow(get_volume_fractions_grains(cpo_index,data,mineral_i,grain_i)* 0.5,2.);
                 }
 
               for (unsigned int grain_i = 0; grain_i < n_grains; ++grain_i)
                 {
+                  double grain_status = get_grain_status(cpo_index,data,mineral_i,grain_i);
+                  
                   // Do the volume fraction of the grain
                   double vf_old = get_volume_fractions_grains(cpo_index,data,mineral_i,grain_i);
                   double vf_new = get_volume_fractions_grains(cpo_index,data,mineral_i,grain_i);
@@ -780,31 +782,53 @@ namespace aspect
                       Assert(std::isfinite(vf_new),ExcMessage("vf_new is not finite before it is set. grain_i = "
                                                               + std::to_string(grain_i) + ", volume_fractions[grain_i] = " + std::to_string(get_volume_fractions_grains(cpo_index,data,mineral_i,grain_i))
                                                               + ", derivatives.first[grain_i] = " + std::to_string(derivatives.first[grain_i])));
-                      /*
-                        Here we actually update the grain size post recovery by either grain boundary migration(GBM) or grain growth(GG).
-                        The bulk recrystalized grain size set the upper bounds on the amount of growth or shrinkage a grain can experience. 
-                      */
-                      if ((this ->get_time() != 0 ) && (sum_area > 0.))
+
+                      if ((this ->get_time() != 0 ) && (area_sum > 0.))
                       {
-                        if(std::abs(dt * (( numbers::PI * std::pow(vf_new* 0.5,2.))/sum_area) * derivatives.first[grain_i]) <= get_bulk_recrystalization_grain_size_mineral(cpo_index,data,mineral_i))
+                        //if(ratio != 0.0)
                         {
-                          vf_new = get_volume_fractions_grains(cpo_index,data,mineral_i,grain_i) + (dt * (( numbers::PI * std::pow(vf_new* 0.5,2.0))/sum_area) * derivatives.first[grain_i]);
-                          set_grain_size_change(cpo_index,data,mineral_i,grain_i, (dt * (( numbers::PI * std::pow(vf_new* 0.5,2.0))/sum_area) * derivatives.first[grain_i]));  
-                        }
-                        else
-                        if((dt * (( numbers::PI * std::pow(vf_new* 0.5,2.))/sum_area) * derivatives.first[grain_i]) < 0)
+                        if(get_strain_rate_ratio(cpo_index,data,mineral_i,grain_i) > 0.5)
+                        {
+                          if(std::abs(dt * (( numbers::PI * std::pow(vf_new* 0.5,2.))/area_sum) * derivatives.first[grain_i]) <=get_bulk_recrystalization_grain_size_mineral(cpo_index,data,mineral_i))  
+                           {
+                            vf_new = get_volume_fractions_grains(cpo_index,data,mineral_i,grain_i) + dt * (( numbers::PI * std::pow(vf_new* 0.5,2.))/area_sum) * derivatives.first[grain_i];
+                            set_grain_size_change(cpo_index,data,mineral_i,grain_i, dt * (( numbers::PI * std::pow(vf_new* 0.5,2.))/area_sum) * derivatives.first[grain_i]);
+                           }
+                          else
+                          if((dt * (( numbers::PI * std::pow(vf_new* 0.5,2.))/area_sum) * derivatives.first[grain_i]) < 0)
                           {
                             vf_new = get_volume_fractions_grains(cpo_index,data,mineral_i,grain_i) - get_bulk_recrystalization_grain_size_mineral(cpo_index,data,mineral_i);
                             set_grain_size_change(cpo_index,data,mineral_i,grain_i, -1.0 * get_bulk_recrystalization_grain_size_mineral(cpo_index,data,mineral_i));
                             break;
                           }
-                        else 
-                        if((dt * (( numbers::PI * std::pow(vf_new* 0.5,2.))/sum_area) * derivatives.first[grain_i]) > 0)
-                         {
+                          else 
+                          if((dt * (( numbers::PI * std::pow(vf_new* 0.5,2.))/area_sum) * derivatives.first[grain_i]) > 0)
+                          {
                             vf_new = get_volume_fractions_grains(cpo_index,data,mineral_i,grain_i) + get_bulk_recrystalization_grain_size_mineral(cpo_index,data,mineral_i);
                             set_grain_size_change(cpo_index,data,mineral_i,grain_i, 1.0 * get_bulk_recrystalization_grain_size_mineral(cpo_index,data,mineral_i));
                             break;
-                         }
+                          }
+                        }
+                        else
+                        if(get_strain_rate_ratio(cpo_index,data,mineral_i,grain_i) > 0.5)
+                        {
+                          const double area_fraction = (( numbers::PI * std::pow(vf_new* 0.5,2.))/area_sum);
+                          const double increment_term = (dt * derivatives.first[grain_i]);
+                          const double initial_term = std::pow(get_volume_fractions_grains(cpo_index,data,mineral_i,grain_i),3.2);
+                          vf_new = std::pow(initial_term + increment_term,1.0/3.2);
+                          //std::cout<<"area fraction = "<<area_fraction<<"\t increment_term = "<<increment_term<<"\tinitial_term = "<<initial_term<<std::endl;
+                          if(vf_new - get_volume_fractions_grains(cpo_index,data,mineral_i,grain_i) < get_bulk_recrystalization_grain_size_mineral(cpo_index,data,mineral_i))
+                          {
+                            set_grain_size_change(cpo_index,data,mineral_i,grain_i,vf_new - get_bulk_recrystalization_grain_size_mineral(cpo_index,data,mineral_i));
+                          }
+                          else
+                          {
+                            vf_new = get_volume_fractions_grains(cpo_index,data,mineral_i,grain_i) +get_bulk_recrystalization_grain_size_mineral(cpo_index,data,mineral_i);
+                             set_grain_size_change(cpo_index,data,mineral_i,grain_i,get_bulk_recrystalization_grain_size_mineral(cpo_index,data,mineral_i));
+                          }
+                          break;
+                        }
+                      }
                       }
                       else
                       {
@@ -812,17 +836,13 @@ namespace aspect
                         set_grain_size_change(cpo_index,data,mineral_i,grain_i, 0.0);
                       }
                         
-                      /*
-                        If any grain shrinks below a certain threshold, the grain is assumed to be consumed by other growing grains and the slot is assigned a grain size of 0 and grain status of -1, allowing the slot to participate in dynamic recrystallization.
-                      */ 
-
-                      if(vf_new < 0.5 * std::pow(10,-6))
+                      
+                      if(vf_new <= 0.5 * std::pow(10,-6))
                       {
                         vf_new = 0.0;
                         set_grain_status(cpo_index,data,mineral_i,grain_i,-1);
                         break;
                       }
-
                       Assert(std::isfinite(get_volume_fractions_grains(cpo_index,data,mineral_i,grain_i)),ExcMessage("volume_fractions[grain_i] is not finite. grain_i = "
                              + std::to_string(grain_i) + ", volume_fractions[grain_i] = " + std::to_string(get_volume_fractions_grains(cpo_index,data,mineral_i,grain_i))
                              + ", derivatives.first[grain_i] = " + std::to_string(derivatives.first[grain_i])));
@@ -835,11 +855,11 @@ namespace aspect
                           break;
                         }
                       vf_old = vf_new;
-                      
+
                     }
                       
                   set_volume_fractions_grains(cpo_index,data,mineral_i,grain_i,vf_new);
-                  sum_of_volumes += vf_new;
+                  sum_volume_fractions += vf_new;
 
                   // Do the rotation matrix for this grain
                   cosine_ref = get_rotation_matrix_grains(cpo_index,data,mineral_i,grain_i);
@@ -1069,6 +1089,14 @@ namespace aspect
                 
                 dislocation_stress_exponent = p_dis.stress_exponent;
               }
+              
+              const double k0 = 1.8 * std::pow(10,3);
+              const double activation_energy_growth = 620 * std::pow(10,3);
+              const double activation_volume_growth = 5 * std::pow(10,-6);
+
+              const double activation_enthalpy_growth = (activation_energy_growth + (pressure * activation_volume_growth));
+              const double exponent_term = -1.0 * activation_enthalpy_growth/(constants::gas_constant * temperature);
+              const double growth_rate = k0 * exp(exponent_term);
 
               return compute_derivatives_drexpp(cpo_index,
                                                    data,
@@ -1082,6 +1110,7 @@ namespace aspect
                                                    dislocation_factor,
                                                    dislocation_stress_exponent,
                                                    deviatoric_strain_rate,
+                                                   growth_rate,
                                                    temperature);
               break;
             }
@@ -1489,6 +1518,7 @@ namespace aspect
                                                                       const double dislocation_factor,
                                                                       const double dislocation_stress_exponent,
                                                                       const SymmetricTensor<2,dim> &deviatoric_strain_rate,
+                                                                      const double growth_rate,
                                                                       const double temperature) const
       {
         // time variables - timestep/time/time increment
@@ -1805,12 +1835,18 @@ namespace aspect
             double volume_fraction_grain = get_volume_fractions_grains(cpo_index,data,mineral_i,grain_i);
             if ((volume_fraction_grain != 0.0) && (rx_now[grain_i]) == false)
               {
-                const double f_strain  = (mean_strain_energy - strain_energy[grain_i]);
-                const double driving_force = f_strain;
+                if(get_strain_rate_ratio(cpo_index,data,mineral_i,grain_i) > 0.5)
+                {
+                  const double driving_force = mean_strain_energy - get_strain_energy(cpo_index,data,mineral_i,grain_i);
                 
-                // Different than D-Rex. Here we actually only compute the derivative and do not multiply it with the volume_fractions. We do that when we advect.
-                deriv_volume_fractions[grain_i] = get_volume_fraction_mineral(cpo_index,data,mineral_i) *  drexpp_mobility[mineral_i] * driving_force;                
+                  // Different than D-Rex. Here we actually only compute the derivative and do not multiply it with the volume_fractions. We do that when we advect.
+                  deriv_volume_fractions[grain_i] = get_volume_fraction_mineral(cpo_index,data,mineral_i) *  drexpp_mobility[mineral_i] * driving_force;                
                 }
+                else
+                {
+                  deriv_volume_fractions[grain_i] = growth_rate;
+                }
+              }
             else
               {
                 deriv_volume_fractions[grain_i] = 0.;
