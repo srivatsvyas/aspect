@@ -169,7 +169,6 @@ namespace aspect
         std::vector<std::vector<double >>dislocation_density(n_minerals);
         std::vector<std::vector<double >>strain_accumulated(n_minerals);
         
-        std::cout<<"Model is being initialized now at timestep "<<this->get_timestep()<<std::endl;
         for (unsigned int mineral_i = 0; mineral_i < n_minerals; ++mineral_i)
           {
             volume_fractions_grains[mineral_i].resize(n_grains);
@@ -464,7 +463,7 @@ namespace aspect
               }
 
             ArrayView<double> data = particle.get_properties();
-
+            
             for (unsigned int mineral_i = 0; mineral_i < n_minerals; ++mineral_i)
               {
 
@@ -900,8 +899,8 @@ namespace aspect
                  set_mean_grain_size_mineral_mineral(cpo_index,data,mineral_i,0.);
               }
                
-              Assert(sum_of_volumes != 0, ExcMessage("The sum of all grain volume fractions of a mineral is equal to zero. This should not happen."));
-              return sum_of_volumes;
+              Assert(sum_volume_fractions != 0, ExcMessage("The sum of all grain volume fractions of a mineral is equal to zero. This should not happen."));
+              return sum_volume_fractions;
               break;
             }
           default:
