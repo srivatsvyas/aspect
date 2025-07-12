@@ -364,55 +364,55 @@ namespace aspect
                     break;
                   
                   case Output::GrainStatus:
-                    string_stream_content_draw_volume_weighting << "mineral_" << write_raw_cpo[property_i].first << "_grain_status" << " ";
+                    string_stream_content_draw_volume_weighting << "mineral_" << write_draw_volume_weighted_cpo[property_i].first << "_grain_status" << " ";
                     break;
                   
                   case Output::StrainrateRatio:
-                    string_stream_content_draw_volume_weighting << "mineral_" << write_raw_cpo[property_i].first << "_strainrate_ratio" << " ";
+                    string_stream_content_draw_volume_weighting << "mineral_" << write_draw_volume_weighted_cpo[property_i].first << "_strainrate_ratio" << " ";
                     break;
                   
                   case Output::ViscosityRatio:
-                    string_stream_content_draw_volume_weighting << "mineral_" << write_raw_cpo[property_i].first << "_viscosity_ratio" << " ";
+                    string_stream_content_draw_volume_weighting << "mineral_" << write_draw_volume_weighted_cpo[property_i].first << "_viscosity_ratio" << " ";
                     break;
                   
                   case Output::ActiveSS:
-                    string_stream_content_draw_volume_weighting << "mineral_" << write_raw_cpo[property_i].first << "_active_slip_system" << " ";
+                    string_stream_content_draw_volume_weighting << "mineral_" << write_draw_volume_weighted_cpo[property_i].first << "_active_slip_system" << " ";
                     break;
                   
                   case Output::RxFraction:
-                    string_stream_content_draw_volume_weighting << "mineral_" << write_raw_cpo[property_i].first << "_rx_fraction" << " ";
+                    string_stream_content_draw_volume_weighting << "mineral_" << write_draw_volume_weighted_cpo[property_i].first << "_rx_fraction" << " ";
                     break;  
                   
                   case Output::StrainRate:
-                    string_stream_content_draw_volume_weighting << "mineral_" << write_raw_cpo[property_i].first << "_strain_rate" << " ";
+                    string_stream_content_draw_volume_weighting << "mineral_" << write_draw_volume_weighted_cpo[property_i].first << "_strain_rate" << " ";
                     break;  
                   
                   case Output::DifferentialStress:
-                    string_stream_content_draw_volume_weighting << "mineral_" << write_raw_cpo[property_i].first << "_differential_stress" << " ";
+                    string_stream_content_draw_volume_weighting << "mineral_" << write_draw_volume_weighted_cpo[property_i].first << "_differential_stress" << " ";
                     break;  
                   
                   case Output::StrainEnergy:
-                    string_stream_content_draw_volume_weighting << "mineral_" << write_raw_cpo[property_i].first << "_strain_energy" << " ";
+                    string_stream_content_draw_volume_weighting << "mineral_" << write_draw_volume_weighted_cpo[property_i].first << "_strain_energy" << " ";
                     break;  
                   
                   case Output::SurfaceEnergy:
-                    string_stream_content_draw_volume_weighting << "mineral_" << write_raw_cpo[property_i].first << "_surface_energy" << " ";
+                    string_stream_content_draw_volume_weighting << "mineral_" << write_draw_volume_weighted_cpo[property_i].first << "_surface_energy" << " ";
                     break;  
                   
                   case Output::GBMVelocity:
-                    string_stream_content_draw_volume_weighting << "mineral_" << write_raw_cpo[property_i].first << "_grain_boundary_velocity" << " ";
+                    string_stream_content_draw_volume_weighting << "mineral_" << write_draw_volume_weighted_cpo[property_i].first << "_grain_boundary_velocity" << " ";
                     break;  
                   
                   case Output::GrainSizeChange:
-                    string_stream_content_draw_volume_weighting << "mineral_" << write_raw_cpo[property_i].first << "_grain_size_change" << " ";
+                    string_stream_content_draw_volume_weighting << "mineral_" << write_draw_volume_weighted_cpo[property_i].first << "_grain_size_change" << " ";
                     break;
                   
                   case Output::DislocationDensity:
-                    string_stream_content_draw_volume_weighting << "mineral_" << write_raw_cpo[property_i].first << "_dislocation_density" << " ";
+                    string_stream_content_draw_volume_weighting << "mineral_" << write_draw_volume_weighted_cpo[property_i].first << "_dislocation_density" << " ";
                     break;
                   
                   case Output::StrainAccumulated:
-                    string_stream_content_draw_volume_weighting << "mineral_" << write_raw_cpo[property_i].first << "_strain_accumulated" << " ";
+                    string_stream_content_draw_volume_weighting << "mineral_" << write_draw_volume_weighted_cpo[property_i].first << "_strain_accumulated" << " ";
                     break;
                   
                   default:

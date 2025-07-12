@@ -974,7 +974,7 @@ namespace aspect
 
               set_deformation_type(cpo_index,data,mineral_i,deformation_type);
               const std::array<double,4> ref_resolved_shear_stress = reference_resolved_shear_stress_from_deformation_type(deformation_type);
-              
+              std::cout<<"pressures = "<<pressure<<std::endl;
               double differential_stress;
 
                 // now compute the normal viscosity to be able to computes the stress
@@ -1030,7 +1030,7 @@ namespace aspect
                 if(differential_stress != 0.)
                  {
                   piezometer= (A[mineral_i] * std::pow(differential_stress/1e6,m[mineral_i]))*std::pow(10,-6);
-                  std::cout<<"\nmineral_i = "<<mineral_i<<"\tpiezometer = "<<piezometer<<"\tdifferential_stress = "<<differential_stress/1e6<<std::endl;
+                  std::cout<<"\nmineral_i = "<<mineral_i<<"\tpiezometer = "<<piezometer<<"\tdifferential_stress = "<<differential_stress/1e6<<"\t pressure =" <<pressure<<std::endl;
                  }
                 else
                  piezometer = 1.0;
