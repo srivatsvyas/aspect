@@ -798,33 +798,25 @@ namespace aspect
                           {
                             vf_new = get_volume_fractions_grains(cpo_index,data,mineral_i,grain_i) - get_bulk_recrystalization_grain_size_mineral(cpo_index,data,mineral_i);
                             set_grain_size_change(cpo_index,data,mineral_i,grain_i, -1.0 * get_bulk_recrystalization_grain_size_mineral(cpo_index,data,mineral_i));
-                            break;
+                            
                           }
                           else 
                           if((dt * (( numbers::PI * std::pow(vf_new* 0.5,2.))/area_sum) * derivatives.first[grain_i]) > 0)
                           {
                             vf_new = get_volume_fractions_grains(cpo_index,data,mineral_i,grain_i) + get_bulk_recrystalization_grain_size_mineral(cpo_index,data,mineral_i);
                             set_grain_size_change(cpo_index,data,mineral_i,grain_i, 1.0 * get_bulk_recrystalization_grain_size_mineral(cpo_index,data,mineral_i));
-                            break;
+                            
                           }
                         }
                         else
-                        if(get_strain_rate_ratio(cpo_index,data,mineral_i,grain_i) > 0.5)
+                        if(get_strain_rate_ratio(cpo_index,data,mineral_i,grain_i) < 0.5)
                         {
                           const double area_fraction = (( numbers::PI * std::pow(vf_new* 0.5,2.))/area_sum);
                           const double increment_term = (dt * derivatives.first[grain_i]);
                           const double initial_term = std::pow(get_volume_fractions_grains(cpo_index,data,mineral_i,grain_i),3.2);
                           vf_new = std::pow(initial_term + increment_term,1.0/3.2);
-                          //std::cout<<"area fraction = "<<area_fraction<<"\t increment_term = "<<increment_term<<"\tinitial_term = "<<initial_term<<std::endl;
-                          if(vf_new - get_volume_fractions_grains(cpo_index,data,mineral_i,grain_i) < get_bulk_recrystalization_grain_size_mineral(cpo_index,data,mineral_i))
-                          {
-                            set_grain_size_change(cpo_index,data,mineral_i,grain_i,vf_new - get_bulk_recrystalization_grain_size_mineral(cpo_index,data,mineral_i));
-                          }
-                          else
-                          {
-                            vf_new = get_volume_fractions_grains(cpo_index,data,mineral_i,grain_i) +get_bulk_recrystalization_grain_size_mineral(cpo_index,data,mineral_i);
-                             set_grain_size_change(cpo_index,data,mineral_i,grain_i,get_bulk_recrystalization_grain_size_mineral(cpo_index,data,mineral_i));
-                          }
+                          set_grain_size_change(cpo_index,data,mineral_i,grain_i, vf_new - get_volume_fractions_grains(cpo_index,data,mineral_i,grain_i));
+                          
                           break;
                         }
                       }
@@ -1394,7 +1386,7 @@ namespace aspect
                
               }
             else
-                n_recrystalized_grains =0;
+                n_recrystalized_grains = 0;
             
             
             double left_overs = volume - (n_recrystalized_grains * rx_volume);
@@ -1426,6 +1418,7 @@ namespace aspect
                         this->compute_random_rotation_matrix(rotation_matrix);
                         set_rotation_matrix_grains(cpo_index,data,mineral_i,permutation_vector[random_var],rotation_matrix * parent_orientation * transpose(rotation_matrix));            
                         set_grain_status(cpo_index,data,mineral_i,permutation_vector[random_var],1);
+                        set_strain_rate_ratio(cpo_index,data,mineral_i,permutation_vector[random_var],0.0);
                         rx_now[permutation_vector[random_var]] = true;
                         permutation_vector.erase(permutation_vector.begin() + random_var);            
                       }
@@ -1441,6 +1434,7 @@ namespace aspect
                           this->compute_random_rotation_matrix(rotation_matrix);
                           set_rotation_matrix_grains(cpo_index,data,mineral_i,empty_buffer_vector[random_var],rotation_matrix * parent_orientation * transpose(rotation_matrix));            
                           set_grain_status(cpo_index,data,mineral_i,empty_buffer_vector[random_var],2);
+                          set_strain_rate_ratio(cpo_index,data,mineral_i,empty_buffer_vector[random_var],0.0);
                           rx_now[empty_buffer_vector[random_var]] = true;
                           empty_buffer_vector.erase(empty_buffer_vector.begin() + random_var);            
                       }
@@ -1481,6 +1475,7 @@ namespace aspect
                           set_strain_accumulated(cpo_index,data,mineral_i,buffer_vector[buffer_vector_counter],0.0);
                           set_strain_energy(cpo_index,data,mineral_i,buffer_vector[buffer_vector_counter],0.);
                           set_rx_fractions(cpo_index,data,mineral_i,buffer_vector[buffer_vector_counter],0.);
+                          set_strain_rate_ratio(cpo_index,data,mineral_i,buffer_vector[buffer_vector_counter],0.0);
                           rx_now[buffer_vector[buffer_vector_counter]] = true;
                           buffer_vector_counter++;
                         }         
@@ -1493,6 +1488,7 @@ namespace aspect
                           set_strain_accumulated(cpo_index,data,mineral_i,buffer_vector[buffer_vector_counter],0.0);
                           set_strain_energy(cpo_index,data,mineral_i,buffer_vector[buffer_vector_counter],0.);
                           set_rx_fractions(cpo_index,data,mineral_i,buffer_vector[buffer_vector_counter],0.);
+                          set_strain_rate_ratio(cpo_index,data,mineral_i,buffer_vector[buffer_vector_counter],0.0);
                           rx_now[buffer_vector[buffer_vector_counter]] = true;
                           buffer_vector_counter++;
                         }
@@ -1750,7 +1746,7 @@ namespace aspect
 
                     const double e_s = scalar_product(slip_cross_product,d);
 
-                    const double rhos = rho_scale * std::pow(tau[indices[slip_system_i]],drexpp_exponent_p[mineral_i]-stress_exponent) *
+                    const double rhos = rho_scale * std::pow(tau[indices[slip_system_i]], stress_exponent - drexpp_exponent_p[mineral_i]) *
                                                     std::pow(std::abs(e_s/non_dimensionalization),drexpp_exponent_p[mineral_i]/stress_exponent);
 
                     dislocation_density[grain_i] += rhos;
