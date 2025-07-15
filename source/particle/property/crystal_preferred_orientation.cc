@@ -786,7 +786,7 @@ namespace aspect
                       {
                         //if(ratio != 0.0)
                         {
-                        if(get_strain_rate_ratio(cpo_index,data,mineral_i,grain_i) > 0.5)
+                        if(get_strain_rate_ratio(cpo_index,data,mineral_i,grain_i) >= 0.5)
                         {
                           if(std::abs(dt * (( numbers::PI * std::pow(vf_new* 0.5,2.))/area_sum) * derivatives.first[grain_i]) <=get_bulk_recrystalization_grain_size_mineral(cpo_index,data,mineral_i))  
                            {
@@ -966,7 +966,7 @@ namespace aspect
 
               set_deformation_type(cpo_index,data,mineral_i,deformation_type);
               const std::array<double,4> ref_resolved_shear_stress = reference_resolved_shear_stress_from_deformation_type(deformation_type);
-              std::cout<<"pressures = "<<pressure<<std::endl;
+              
               double differential_stress;
 
                 // now compute the normal viscosity to be able to computes the stress
@@ -1068,6 +1068,8 @@ namespace aspect
                 diffusion_pre_strainrate = p_dif.prefactor * std::exp(-1. * (p_dif.activation_energy +
                                                                   pressure * p_dif.activation_volume)/
                                                                   (constants::gas_constant * temperature));
+                
+                std::cout<<"diffusion pre strain rate = "<<diffusion_pre_strainrate<<std::endl;
                 diffusion_grain_size_exponent = p_dif.grain_size_exponent;
                 
                 const MaterialModel::Rheology::DislocationCreepParameters p_dis = rheology_disl->compute_creep_parameters(composition,
@@ -1538,9 +1540,11 @@ namespace aspect
         // Calculation of strain rate tensor and velocity gradient tensor for dislocation creep
         for(unsigned int i_grain = 0; i_grain < n_grains; ++i_grain)
         {
+          if(get_volume_fractions_grains(cpo_index,data,mineral_i,i_grain) > 0.0)
+          {
           // Calculating the strain rate tensor corresponding to diffusion creep
           const double grain_size = get_volume_fractions_grains(cpo_index,data,mineral_i,i_grain);
-          const SymmetricTensor<2,dim> diffusion_strain_rate = diffusion_pre_strainrate * deviatoric_stress * std::pow(grain_size,diffusion_grain_size_exponent);
+          const SymmetricTensor<2,dim> diffusion_strain_rate = diffusion_pre_strainrate * deviatoric_stress * std::pow(grain_size,-1.0 * diffusion_grain_size_exponent);
           const SymmetricTensor<2,dim> dislocation_strain_rate = deviatoric_strain_rate - diffusion_strain_rate;
 
           // even in 2d we need 3d strain-rates and velocity gradient tensors. So we make them 3d by
@@ -1559,7 +1563,8 @@ namespace aspect
                 //sym: strain_rate_3d[2][1] = strain_rate[1][2];
                 dislocation_strain_rate_3d[i_grain][2][2] = dislocation_strain_rate[2][2];
               }
-          
+         
+
           const Tensor<2,dim> diffusion_velocity_gradient_tensor = diffusion_strain_rate;
           
           Tensor<2,3> diffusion_velocity_gradient_3d;
@@ -1578,10 +1583,13 @@ namespace aspect
             
           dislocation_velocity_gradient_3d[i_grain] = velocity_gradient_tensor - diffusion_velocity_gradient_3d;
           if(t != 0)
+          {
             set_strain_rate_ratio(cpo_index,data,mineral_i,i_grain,std::sqrt(std::max(-second_invariant(dislocation_strain_rate_3d[i_grain]), 0.)/ std::max(-second_invariant(strain_rate), 0.)));
+          }
           else 
             set_strain_rate_ratio(cpo_index,data,mineral_i,i_grain,0);
         }
+      }
 
         // Variables that I will store for the purpose of benchmarking model behavior and will have to make them local variables before trying to merge with ASPECT
         std::vector<double> volume_derivative(n_grains);
@@ -1733,21 +1741,15 @@ namespace aspect
                 const double ref_stress = std::pow(non_dimensionalization/dislocation_factor,1.0/dislocation_stress_exponent);
                
                 rho_scale = std::pow(ref_stress /(0.5 * shear_modulus * burgers_vector),drexpp_exponent_p[mineral_i]);
-                
+                             
   
                 
                 set_differential_stress(cpo_index,data,mineral_i,grain_i,ref_stress);
 
                 for (unsigned int slip_system_i = 0; slip_system_i < 4; ++slip_system_i)
                   {
-                    const Tensor<1,3> slip_normal_global = rotation_matrix_transposed*slip_normal_reference[slip_system_i];
-                    const Tensor<1,3> slip_direction_global = rotation_matrix_transposed*slip_direction_reference[slip_system_i];
-                    const Tensor<2,3> slip_cross_product = outer_product(slip_direction_global,slip_normal_global);
-
-                    const double e_s = scalar_product(slip_cross_product,d);
-
                     const double rhos = rho_scale * std::pow(tau[indices[slip_system_i]], stress_exponent - drexpp_exponent_p[mineral_i]) *
-                                                    std::pow(std::abs(e_s/non_dimensionalization),drexpp_exponent_p[mineral_i]/stress_exponent);
+                                                    std::pow(std::abs(beta[indices[slip_system_i]] * gamma/non_dimensionalization),drexpp_exponent_p[mineral_i]/stress_exponent);
 
                     dislocation_density[grain_i] += rhos;
                   }
@@ -1756,6 +1758,7 @@ namespace aspect
                   dislocation_density[grain_i] = dislocation_density[grain_i];
                 else 
                   dislocation_density[grain_i] = (get_strain_accumulated(cpo_index,data,mineral_i,grain_i)/3.0) * dislocation_density[grain_i];
+                
                 
                 strain_energy[grain_i] = shear_modulus * burgers_vector * burgers_vector * dislocation_density[grain_i];
 
@@ -1830,7 +1833,7 @@ namespace aspect
             double volume_fraction_grain = get_volume_fractions_grains(cpo_index,data,mineral_i,grain_i);
             if ((volume_fraction_grain != 0.0) && (rx_now[grain_i]) == false)
               {
-                if(get_strain_rate_ratio(cpo_index,data,mineral_i,grain_i) > 0.5)
+                if(get_strain_rate_ratio(cpo_index,data,mineral_i,grain_i) >= 0.5)
                 {
                   const double driving_force = mean_strain_energy - get_strain_energy(cpo_index,data,mineral_i,grain_i);
                 
