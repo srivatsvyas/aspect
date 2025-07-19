@@ -543,13 +543,7 @@ namespace aspect
                      * of finding the nearest orthonormal matrix using the SVD
                      */
                     Tensor<2,3> rotation_matrix = get_rotation_matrix_grains(data_position,data,mineral_i,grain_i);
-                    for (size_t i = 0; i < 3; ++i)
-                      {
-                        for (size_t j = 0; j < 3; ++j)
-                          {
-                            Assert(!std::isnan(rotation_matrix[i][j]), ExcMessage("rotation_matrix is nan before orthogonalization."));
-                          }
-                      }
+                    
 
                     rotation_matrix = dealii::project_onto_orthogonal_tensors(rotation_matrix);
                     set_rotation_matrix_grains(data_position,data,mineral_i,grain_i,rotation_matrix);
@@ -877,14 +871,16 @@ namespace aspect
               {
                  if(get_volume_fractions_grains(cpo_index,data,mineral_i,i_grain)>0.)
                   {
-                    sum_grain_size += get_volume_fractions_grains(cpo_index,data,mineral_i,i_grain);
+                    sum_grain_size += 1.0/get_volume_fractions_grains(cpo_index,data,mineral_i,i_grain);
                     n_grains_considered += 1;
                   }
               }
 
               if(n_grains_considered > 0)
               {
-                 set_mean_grain_size_mineral_mineral(cpo_index,data,mineral_i,(sum_grain_size/n_grains_considered));
+                const double mean_grain_size = std::pow((sum_grain_size/n_grains_considered), -1.0);
+                std::cout<<"mean grain size = "<<mean_grain_size<<std::endl;
+                 set_mean_grain_size_mineral_mineral(cpo_index,data,mineral_i,mean_grain_size);
               } 
               else
               {
@@ -1022,7 +1018,6 @@ namespace aspect
                 if(differential_stress != 0.)
                  {
                   piezometer= (A[mineral_i] * std::pow(differential_stress/1e6,m[mineral_i]))*std::pow(10,-6);
-                  std::cout<<"\nmineral_i = "<<mineral_i<<"\tpiezometer = "<<piezometer<<"\tdifferential_stress = "<<differential_stress/1e6<<"\t pressure =" <<pressure<<std::endl;
                  }
                 else
                  piezometer = 1.0;
@@ -1546,7 +1541,20 @@ namespace aspect
           const double grain_size = get_volume_fractions_grains(cpo_index,data,mineral_i,i_grain);
           const SymmetricTensor<2,dim> diffusion_strain_rate = diffusion_pre_strainrate * deviatoric_stress * std::pow(grain_size,-1.0 * diffusion_grain_size_exponent);
           const SymmetricTensor<2,dim> dislocation_strain_rate = deviatoric_strain_rate - diffusion_strain_rate;
-
+          
+          if(i_grain == 998)
+          {
+            for(int i = 0; i < dim; i++)
+            {
+            for(int k = 0; k < dim; k++)
+              {
+                std::cout<<dislocation_strain_rate[i][k]<<"\t";
+              }
+            std::cout<<std::endl;
+            }
+            std::cout<<std::endl;
+          }
+          
           // even in 2d we need 3d strain-rates and velocity gradient tensors. So we make them 3d by
           // adding an extra dimension which is zero.
           
@@ -1563,7 +1571,11 @@ namespace aspect
                 //sym: strain_rate_3d[2][1] = strain_rate[1][2];
                 dislocation_strain_rate_3d[i_grain][2][2] = dislocation_strain_rate[2][2];
               }
-         
+          
+            if(i_grain == 998)
+          {
+            std::cout<<std::sqrt(std::max(-second_invariant(dislocation_strain_rate_3d[i_grain]), 0.))<<"\t"<<std::pow(grain_size,-1.0 * diffusion_grain_size_exponent)<<std::endl;
+          }
 
           const Tensor<2,dim> diffusion_velocity_gradient_tensor = diffusion_strain_rate;
           
@@ -1585,6 +1597,7 @@ namespace aspect
           if(t != 0)
           {
             set_strain_rate_ratio(cpo_index,data,mineral_i,i_grain,std::sqrt(std::max(-second_invariant(dislocation_strain_rate_3d[i_grain]), 0.)/ std::max(-second_invariant(strain_rate), 0.)));
+            
           }
           else 
             set_strain_rate_ratio(cpo_index,data,mineral_i,i_grain,0);
