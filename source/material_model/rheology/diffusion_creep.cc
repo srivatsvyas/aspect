@@ -96,8 +96,6 @@ namespace aspect
         return compute_viscosity(pressure, temperature, grain_size, composition, phase_function_values, n_phase_transitions_per_composition);
       }
 
-
-
       template <int dim>
       double
       DiffusionCreep<dim>::compute_viscosity (const double pressure,

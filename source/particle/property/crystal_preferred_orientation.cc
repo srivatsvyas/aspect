@@ -871,7 +871,7 @@ namespace aspect
               {
                  if(get_volume_fractions_grains(cpo_index,data,mineral_i,i_grain)>0.)
                   {
-                    sum_grain_size += 1.0/get_volume_fractions_grains(cpo_index,data,mineral_i,i_grain);
+                    sum_grain_size += (1.0/get_volume_fractions_grains(cpo_index,data,mineral_i,i_grain));
                     n_grains_considered += 1;
                   }
               }
@@ -879,7 +879,6 @@ namespace aspect
               if(n_grains_considered > 0)
               {
                 const double mean_grain_size = std::pow((sum_grain_size/n_grains_considered), -1.0);
-                std::cout<<"mean grain size = "<<mean_grain_size<<std::endl;
                  set_mean_grain_size_mineral_mineral(cpo_index,data,mineral_i,mean_grain_size);
               } 
               else
@@ -1064,7 +1063,6 @@ namespace aspect
                                                                   pressure * p_dif.activation_volume)/
                                                                   (constants::gas_constant * temperature));
                 
-                std::cout<<"diffusion pre strain rate = "<<diffusion_pre_strainrate<<std::endl;
                 diffusion_grain_size_exponent = p_dif.grain_size_exponent;
                 
                 const MaterialModel::Rheology::DislocationCreepParameters p_dis = rheology_disl->compute_creep_parameters(composition,
@@ -1539,21 +1537,8 @@ namespace aspect
           {
           // Calculating the strain rate tensor corresponding to diffusion creep
           const double grain_size = get_volume_fractions_grains(cpo_index,data,mineral_i,i_grain);
-          const SymmetricTensor<2,dim> diffusion_strain_rate = diffusion_pre_strainrate * deviatoric_stress * std::pow(grain_size,-1.0 * diffusion_grain_size_exponent);
+          const SymmetricTensor<2,dim> diffusion_strain_rate = diffusion_pre_strainrate * deviatoric_stress * std::pow(grain_size, -1.0 * diffusion_grain_size_exponent);
           const SymmetricTensor<2,dim> dislocation_strain_rate = deviatoric_strain_rate - diffusion_strain_rate;
-          
-          if(i_grain == 998)
-          {
-            for(int i = 0; i < dim; i++)
-            {
-            for(int k = 0; k < dim; k++)
-              {
-                std::cout<<dislocation_strain_rate[i][k]<<"\t";
-              }
-            std::cout<<std::endl;
-            }
-            std::cout<<std::endl;
-          }
           
           // even in 2d we need 3d strain-rates and velocity gradient tensors. So we make them 3d by
           // adding an extra dimension which is zero.
@@ -1572,11 +1557,6 @@ namespace aspect
                 dislocation_strain_rate_3d[i_grain][2][2] = dislocation_strain_rate[2][2];
               }
           
-            if(i_grain == 998)
-          {
-            std::cout<<std::sqrt(std::max(-second_invariant(dislocation_strain_rate_3d[i_grain]), 0.))<<"\t"<<std::pow(grain_size,-1.0 * diffusion_grain_size_exponent)<<std::endl;
-          }
-
           const Tensor<2,dim> diffusion_velocity_gradient_tensor = diffusion_strain_rate;
           
           Tensor<2,3> diffusion_velocity_gradient_3d;
