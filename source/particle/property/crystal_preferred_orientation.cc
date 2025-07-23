@@ -1628,6 +1628,11 @@ namespace aspect
         const std::array< double, dim > eigenvalues = dealii::eigenvalues(deviatoric_stress);
         const double differential_stress = eigenvalues[0]-eigenvalues[dim-1];
         const double dislocation_creep = dislocation_factor * std::pow(differential_stress,dislocation_stress_exponent);
+
+        // Calculating Dislocation creep strain rate for all grains
+        const std::array< double, dim > eigenvalues = dealii::eigenvalues(deviatoric_stress);
+        const double differential_stress = eigenvalues[0]-eigenvalues[dim-1];
+        const double dislocation_creep = dislocation_factor * std::pow(differential_stress,dislocation_stress_exponent);
        
         for(unsigned int i_grain = 0; i_grain < n_grains; ++i_grain)
         {
