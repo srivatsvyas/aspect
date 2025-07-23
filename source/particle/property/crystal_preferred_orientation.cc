@@ -865,8 +865,8 @@ namespace aspect
 
                 }
               
-              double sum_grain_size;
-              int n_grains_considered;
+              double sum_grain_size = 0.0;
+              int n_grains_considered = 0;
               for(unsigned int i_grain = 0; i_grain < n_grains; ++i_grain)
               {
                  if(get_volume_fractions_grains(cpo_index,data,mineral_i,i_grain)>0.)
