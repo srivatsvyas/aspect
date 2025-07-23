@@ -313,13 +313,13 @@ namespace aspect
                   // Calculating the mean grain size for the mineral phase in question
                   for(unsigned int grain_i = 0; grain_i < n_grains_init; ++grain_i)
                   {
-                    sum_grain_size += volume_fractions_grains[mineral_i][grain_i];
+                    sum_grain_size += 1.0/volume_fractions_grains[mineral_i][grain_i];
                     grains += 1;
                     
                   }
                   
-                  mean_grain_size[mineral_i] = sum_grain_size/grains;
-                  
+                  mean_grain_size[mineral_i] = std::pow(sum_grain_size/grains,-1.0);
+                  std::cout<<"initial mean grain size = "<<mean_grain_size[mineral_i]<<std::endl;
                 }
                 else
                 {
@@ -876,6 +876,8 @@ namespace aspect
                   }
               }
 
+              std::cout<<"sum_grain_size = "<<sum_grain_size<<"\t n_grains_considered = "<<n_grains_considered<<"\t mean = "<<(sum_grain_size/n_grains_considered)<<std::endl;
+
               if(n_grains_considered > 0)
               {
                 const double mean_grain_size = std::pow((sum_grain_size/n_grains_considered), -1.0);
@@ -885,7 +887,7 @@ namespace aspect
               {
                  set_mean_grain_size_mineral_mineral(cpo_index,data,mineral_i,0.);
               }
-               
+              std::cout<<"Mean grain size predicted by D-Rex++ = "<<get_mean_grain_size_mineral(cpo_index,data,mineral_i)<<std::endl;
               Assert(sum_volume_fractions != 0, ExcMessage("The sum of all grain volume fractions of a mineral is equal to zero. This should not happen."));
               return sum_volume_fractions;
               break;
@@ -1530,6 +1532,11 @@ namespace aspect
         std::vector<SymmetricTensor<2,3>> dislocation_strain_rate_3d(n_grains);
         std::vector<Tensor<2,3>> dislocation_velocity_gradient_3d(n_grains);
 
+        // Calculating Dislocation creep strain rate for all grains
+        const std::array< double, dim > eigenvalues = dealii::eigenvalues(deviatoric_stress);
+        const double differential_stress = eigenvalues[0]-eigenvalues[dim-1];
+        const double dislocation_creep = dislocation_factor * std::pow(differential_stress,dislocation_stress_exponent);
+
         // Calculation of strain rate tensor and velocity gradient tensor for dislocation creep
         for(unsigned int i_grain = 0; i_grain < n_grains; ++i_grain)
         {
@@ -1537,8 +1544,21 @@ namespace aspect
           {
           // Calculating the strain rate tensor corresponding to diffusion creep
           const double grain_size = get_volume_fractions_grains(cpo_index,data,mineral_i,i_grain);
-          const SymmetricTensor<2,dim> diffusion_strain_rate = diffusion_pre_strainrate * deviatoric_stress * std::pow(grain_size, -1.0 * diffusion_grain_size_exponent);
-          const SymmetricTensor<2,dim> dislocation_strain_rate = deviatoric_strain_rate - diffusion_strain_rate;
+          double diffusion_strain_rate;
+          diffusion_strain_rate = diffusion_pre_strainrate * differential_stress * std::pow(grain_size, -1.0 * diffusion_grain_size_exponent);
+          double strr_ratio;
+
+          if(t ==0)
+          {
+            strr_ratio= 0.;
+          }
+          else
+          {
+            strr_ratio = diffusion_strain_rate/(diffusion_strain_rate + dislocation_creep);
+          }
+          
+          const SymmetricTensor<2,dim> diffusion_creep_strain_rate = strr_ratio * deviatoric_strain_rate;
+          const SymmetricTensor<2,dim> dislocation_strain_rate = deviatoric_strain_rate - diffusion_creep_strain_rate;
           
           // even in 2d we need 3d strain-rates and velocity gradient tensors. So we make them 3d by
           // adding an extra dimension which is zero.
@@ -1557,7 +1577,7 @@ namespace aspect
                 dislocation_strain_rate_3d[i_grain][2][2] = dislocation_strain_rate[2][2];
               }
           
-          const Tensor<2,dim> diffusion_velocity_gradient_tensor = diffusion_strain_rate;
+          const Tensor<2,dim> diffusion_velocity_gradient_tensor = diffusion_creep_strain_rate;
           
           Tensor<2,3> diffusion_velocity_gradient_3d;
           diffusion_velocity_gradient_3d[0][0] = diffusion_velocity_gradient_tensor[0][0];
