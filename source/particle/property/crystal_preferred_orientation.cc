@@ -790,7 +790,6 @@ namespace aspect
 
                       if ((this ->get_time() != 0 ) && (area_sum > 0.))
                       {
-                        //if(ratio != 0.0)
                         {
                         if(get_energy_ratio(cpo_index,data,mineral_i,grain_i) >= 1.0)
                         {
@@ -804,7 +803,6 @@ namespace aspect
                           {
                             vf_new = get_volume_fractions_grains(cpo_index,data,mineral_i,grain_i) - get_bulk_recrystalization_grain_size_mineral(cpo_index,data,mineral_i);
                             set_grain_size_change(cpo_index,data,mineral_i,grain_i, -1.0 * get_bulk_recrystalization_grain_size_mineral(cpo_index,data,mineral_i));
-                            
                           }
                           else 
                           if((dt * (( numbers::PI * std::pow(vf_new* 0.5,2.))/area_sum) * derivatives.first[grain_i]) > 0)
@@ -1509,7 +1507,7 @@ namespace aspect
                       {
                         int random_var = std::rand() % permutation_vector.size();
                         set_volume_fractions_grains(cpo_index,data,mineral_i,permutation_vector[random_var],get_bulk_recrystalization_grain_size_mineral(cpo_index,data,mineral_i));
-                        set_rotation_matrix_grains(cpo_index,data,mineral_i,permutation_vector[random_var],rotation_matrix * parent_orientation * transpose(rotation_matrix));            
+                        set_rotation_matrix_grains(cpo_index,data,mineral_i,permutation_vector[random_var],rotation_matrix * parent_orientation);            
                         set_grain_status(cpo_index,data,mineral_i,permutation_vector[random_var],1);
                         set_strain_rate_ratio(cpo_index,data,mineral_i,permutation_vector[random_var],0.0);
                         rx_now[permutation_vector[random_var]] = true;
@@ -1524,7 +1522,7 @@ namespace aspect
                          {
                           int random_var = std::rand() % empty_buffer_vector.size();
                           set_volume_fractions_grains(cpo_index,data,mineral_i,empty_buffer_vector[random_var],get_bulk_recrystalization_grain_size_mineral(cpo_index,data,mineral_i));
-                          set_rotation_matrix_grains(cpo_index,data,mineral_i,empty_buffer_vector[random_var],rotation_matrix * parent_orientation * transpose(rotation_matrix));            
+                          set_rotation_matrix_grains(cpo_index,data,mineral_i,empty_buffer_vector[random_var],rotation_matrix * parent_orientation);            
                           set_grain_status(cpo_index,data,mineral_i,empty_buffer_vector[random_var],2);
                           set_strain_rate_ratio(cpo_index,data,mineral_i,empty_buffer_vector[random_var],0.0);
                           rx_now[empty_buffer_vector[random_var]] = true;
@@ -1561,7 +1559,7 @@ namespace aspect
                       if(replaced_grain_volume > 0.0)
                         { 
                           set_volume_fractions_grains(cpo_index,data,mineral_i,buffer_vector[buffer_vector_counter],2.0 *std::pow((replaced_grain_volume/numbers::PI),1./2.));
-                          set_rotation_matrix_grains(cpo_index,data,mineral_i,buffer_vector[buffer_vector_counter],rotation_matrix * parent_orientation * transpose(rotation_matrix));            
+                          set_rotation_matrix_grains(cpo_index,data,mineral_i,buffer_vector[buffer_vector_counter],rotation_matrix * parent_orientation );            
                           set_grain_status(cpo_index,data,mineral_i,buffer_vector[buffer_vector_counter],3);
                           set_strain_accumulated(cpo_index,data,mineral_i,buffer_vector[buffer_vector_counter],0.0);
                           set_strain_energy(cpo_index,data,mineral_i,buffer_vector[buffer_vector_counter],0.);
@@ -1573,7 +1571,7 @@ namespace aspect
                       for (unsigned int recrystalize_grain_i = 0; recrystalize_grain_i < n_recrystalized_grains  ; ++recrystalize_grain_i)
                         {
                           set_volume_fractions_grains(cpo_index,data,mineral_i,buffer_vector[buffer_vector_counter],get_bulk_recrystalization_grain_size_mineral(cpo_index,data,mineral_i));
-                          set_rotation_matrix_grains(cpo_index,data,mineral_i,buffer_vector[buffer_vector_counter],rotation_matrix * parent_orientation * transpose(rotation_matrix));            
+                          set_rotation_matrix_grains(cpo_index,data,mineral_i,buffer_vector[buffer_vector_counter],rotation_matrix * parent_orientation );            
                           set_grain_status(cpo_index,data,mineral_i,buffer_vector[buffer_vector_counter],4);
                           set_strain_accumulated(cpo_index,data,mineral_i,buffer_vector[buffer_vector_counter],0.0);
                           set_strain_energy(cpo_index,data,mineral_i,buffer_vector[buffer_vector_counter],0.);
