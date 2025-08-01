@@ -323,7 +323,11 @@ namespace aspect
                   case Output::StrainAccumulated:
                     string_stream_content_raw << "mineral_" << write_raw_cpo[property_i].first << "_strain_accumulated" << " ";
                     break;
-                                    
+                  
+                  case Output::EnergyRatio:
+                    string_stream_content_raw << "mineral_" << write_raw_cpo[property_i].first << "_energy_ratio" << " ";
+                    break;
+                 
                   default:
                     Assert(false, ExcMessage("Internal error: raw CPO postprocess case not found."));
                     break;
@@ -415,6 +419,10 @@ namespace aspect
                     string_stream_content_draw_volume_weighting << "mineral_" << write_draw_volume_weighted_cpo[property_i].first << "_strain_accumulated" << " ";
                     break;
                   
+                  case Output::EnergyRatio:
+                    string_stream_content_draw_volume_weighting << "mineral_" << write_draw_volume_weighted_cpo[property_i].first << "_energy_ratio" << " ";
+                    break;
+
                   default:
                     Assert(false, ExcMessage("Internal error: raw CPO postprocess case not found."));
                     break;
@@ -619,6 +627,14 @@ namespace aspect
                                                         write_raw_cpo[property_i].first,
                                                         grain) << " ";
                             break;
+                          
+                          case Output::EnergyRatio:
+                            string_stream_content_raw<< cpo_particle_property.get_energy_ratio(
+                                                        cpo_data_position,
+                                                        properties,
+                                                        write_raw_cpo[property_i].first,
+                                                        grain) << " ";
+                            break;
 
                           default:
                             Assert(false, ExcMessage("Internal error: raw CPO postprocess case not found."));
@@ -791,7 +807,15 @@ namespace aspect
                                                         write_draw_volume_weighted_cpo[property_i].first,
                                                         grain) << " ";
                             break;
-                          
+                         
+                          case Output::EnergyRatio:
+                            string_stream_content_draw_volume_weighting<< cpo_particle_property.get_energy_ratio(
+                                                        cpo_data_position,
+                                                        properties,
+                                                        write_raw_cpo[property_i].first,
+                                                        grain) << " ";
+                            break;
+                         
                           default:
                             Assert(false, ExcMessage("Internal error: raw CPO postprocess case not found."));
                             break;
@@ -942,6 +966,8 @@ namespace aspect
         return Output::DislocationDensity;
       if (string == "Strain accumulated")
         return Output::StrainAccumulated;
+      if (string == "Energy ratio")
+        return Output::EnergyRatio;
       else
         return Output::not_found;
     }
