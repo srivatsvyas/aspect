@@ -114,11 +114,11 @@ namespace aspect
         // A: prefactor,
         // d: grain size, m: grain size exponent, E: activation energy, P: pressure,
         // V; activation volume, R: gas constant, T: temperature.
-        double viscosity = 0.5 / p.prefactor *
-                           std::exp((p.activation_energy +
-                                     pressure*p.activation_volume)/
-                                    (constants::gas_constant*temperature)) *
-                           std::pow(grain_size, p.grain_size_exponent);
+        double viscosity_diffusion = 0.5 / p.prefactor *
+                                     std::exp((p.activation_energy +
+                                               pressure*p.activation_volume)/
+                                              (constants::gas_constant*temperature)) *
+                                     std::pow(grain_size, p.grain_size_exponent);
 
         Assert (viscosity > 0.0,
                 ExcMessage ("Negative diffusion viscosity detected. This is unphysical and should not happen. "
