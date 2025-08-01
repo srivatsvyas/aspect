@@ -883,7 +883,7 @@ namespace aspect
               {
                  if(get_volume_fractions_grains(cpo_index,data,mineral_i,i_grain)>0.)
                   {
-                    sum_grain_size += (get_volume_fractions_grains(cpo_index,data,mineral_i,i_grain));
+                    sum_grain_size += 1.0/(get_volume_fractions_grains(cpo_index,data,mineral_i,i_grain));
                     n_grains_considered += 1;
                   }
               }
@@ -891,16 +891,18 @@ namespace aspect
               
               if(n_grains_considered > 0)
               {
-                const double mean_grain_size = std::pow((sum_grain_size/n_grains_considered), 1.0);
-                 set_mean_grain_size_mineral_mineral(cpo_index,data,mineral_i,mean_grain_size);
+                const double mean_grain_size = std::pow((sum_grain_size/n_grains_considered), -1.0);
+                set_mean_grain_size_mineral(cpo_index,data,mineral_i,mean_grain_size);
+                std::cout<<"mean grain size predicted in D-Rex++ = "<<get_mean_grain_size_mineral(cpo_index,data,mineral_i)<<std::endl;
               } 
               else
               {
-                 set_mean_grain_size_mineral_mineral(cpo_index,data,mineral_i,0.);
+                 set_mean_grain_size_mineral(cpo_index,data,mineral_i,0.);
               }
               Assert(sum_volume_fractions != 0, ExcMessage("The sum of all grain volume fractions of a mineral is equal to zero. This should not happen."));
               return sum_volume_fractions;
               break;
+             
             }
           default:
               AssertThrow(false, ExcMessage("Internal error."));
@@ -966,6 +968,7 @@ namespace aspect
             {
               const DeformationType deformation_type = determine_deformation_type(deformation_type_selector[mineral_i],
                                                                                   position,
+                                                                                  cell,
                                                                                   temperature,
                                                                                   pressure,
                                                                                   velocity,
@@ -1059,7 +1062,7 @@ namespace aspect
 
               for(unsigned int j = 0 ; j < phase_function->n_phase_transitions(); ++j)
               {
-                phase_inputs.phase_index = j;
+                phase_inputs.phase_transition_index = j;
                 phase_function_values[j] = phase_function->compute_value(phase_inputs);
               }
               
@@ -1629,11 +1632,6 @@ namespace aspect
         const double differential_stress = eigenvalues[0]-eigenvalues[dim-1];
         const double dislocation_creep = dislocation_factor * std::pow(differential_stress,dislocation_stress_exponent);
 
-        // Calculating Dislocation creep strain rate for all grains
-        const std::array< double, dim > eigenvalues = dealii::eigenvalues(deviatoric_stress);
-        const double differential_stress = eigenvalues[0]-eigenvalues[dim-1];
-        const double dislocation_creep = dislocation_factor * std::pow(differential_stress,dislocation_stress_exponent);
-       
         for(unsigned int i_grain = 0; i_grain < n_grains; ++i_grain)
         {
           if(get_volume_fractions_grains(cpo_index,data,mineral_i,i_grain) > 0.0)
@@ -1658,8 +1656,7 @@ namespace aspect
           
           // even in 2d we need 3d strain-rates and velocity gradient tensors. So we make them 3d by
           // adding an extra dimension which is zero.
-          dislocation_strain_rate_3d[i_grain] = strain_rate;
-          /*
+          
             dislocation_strain_rate_3d[i_grain][0][0] = dislocation_strain_rate[0][0];
             dislocation_strain_rate_3d[i_grain][0][1] = dislocation_strain_rate[0][1];
               //sym: strain_rate_3d[1][0] = strain_rate[1][0];
@@ -1673,10 +1670,8 @@ namespace aspect
                 //sym: strain_rate_3d[2][1] = strain_rate[1][2];
                 dislocation_strain_rate_3d[i_grain][2][2] = dislocation_strain_rate[2][2];
               }
-          
-          */
-          
-         const Tensor<2,dim> diffusion_velocity_gradient_tensor = diffusion_creep_strain_rate;
+                    
+          const Tensor<2,dim> diffusion_velocity_gradient_tensor = diffusion_creep_strain_rate;
           
           Tensor<2,3> diffusion_velocity_gradient_3d;
           diffusion_velocity_gradient_3d[0][0] = diffusion_velocity_gradient_tensor[0][0];
@@ -1692,7 +1687,7 @@ namespace aspect
                 diffusion_velocity_gradient_3d[2][2] = diffusion_velocity_gradient_tensor[2][2];
               }
             
-          dislocation_velocity_gradient_3d[i_grain] = velocity_gradient_tensor ;//- diffusion_velocity_gradient_3d;
+          dislocation_velocity_gradient_3d[i_grain] = velocity_gradient_tensor - diffusion_velocity_gradient_3d;
           if(t != 0)
           {
             set_strain_rate_ratio(cpo_index,data,mineral_i,i_grain,std::sqrt(std::max(-second_invariant(dislocation_strain_rate_3d[i_grain]), 0.)/ std::max(-second_invariant(strain_rate), 0.)));

@@ -489,7 +489,7 @@ namespace aspect
            * @param piezometer The value of the piezometer predicted for the mineral phase.
            */
           inline
-          void set_mean_grain_size_mineral_mineral(const unsigned int cpo_data_position,
+          void set_mean_grain_size_mineral(const unsigned int cpo_data_position,
                                            const ArrayView<double> &data,
                                            const unsigned int mineral_i,
                                            const double recrystalization_size) const
@@ -699,7 +699,7 @@ namespace aspect
            * @param grain_i The grain to get the value of the volume fraction of.
            */
           inline
-          double get_viscosity_ratio(const unsigned int cpo_data_position,
+          double get_grain_boundary_velocity(const unsigned int cpo_data_position,
                                              const ArrayView<const double> &data,
                                              const unsigned int mineral_i,
                                              const unsigned int grain_i) const
@@ -717,13 +717,13 @@ namespace aspect
            * @param volume_fractions_grains The value of the volume fraction of a grain to set.
            */
           inline
-          void set_viscosity_ratio(const unsigned int cpo_data_position,
+          void set_grain_boundary_velocity(const unsigned int cpo_data_position,
                                            const ArrayView<double> &data,
                                            const unsigned int mineral_i,
                                            const unsigned int grain_i,
-                                           const double viscosity_ratio) const
+                                           const double grain_boundary_velocity) const
           {
-            data[cpo_data_position + 17 + grain_i * 24 + mineral_i * (n_grains * 24 + 4)] = rx_fractions;
+            data[cpo_data_position + 17 + grain_i * 24 + mineral_i * (n_grains * 24 + 4)] = grain_boundary_velocity;
           }
 
           /**
@@ -759,7 +759,7 @@ namespace aspect
                                            const unsigned int grain_i,
                                            const double rx_fractions) const
           {
-            data[cpo_data_position + 18 + grain_i * 24 + mineral_i * (n_grains * 24 + 4)] = active_slip_system;
+            data[cpo_data_position + 18 + grain_i * 24 + mineral_i * (n_grains * 24 + 4)] = rx_fractions;
           }
 
           // After this, all properties stored to the cpo array is purely for the purpose of visualizing the evolution of different model parameters for verification and not needed for running the model
@@ -796,7 +796,7 @@ namespace aspect
                                            const unsigned int grain_i,
                                            const int active_slip_system) const
           {
-            data[cpo_data_position + 19 + grain_i * 24 + mineral_i * (n_grains * 24 + 4)] = strain_rate;
+            data[cpo_data_position + 19 + grain_i * 24 + mineral_i * (n_grains * 24 + 4)] = active_slip_system;
           }
 
           // After this, all properties stored to the cpo array is purely for the purpose of visualizing the evolution of different model parameters for verification and not needed for running the model
@@ -833,7 +833,7 @@ namespace aspect
                                            const unsigned int grain_i,
                                            const double strain_rate) const
           {
-            data[cpo_data_position + 20 + grain_i * 24 + mineral_i * (n_grains * 24 + 4)] = differential_stress;
+            data[cpo_data_position + 20 + grain_i * 24 + mineral_i * (n_grains * 24 + 4)] = strain_rate;
           }
 
           inline
@@ -882,17 +882,17 @@ namespace aspect
            * @param volume_fractions_grains The value of the volume fraction of a grain to set.
            */
           inline
-          void set_differential_stress(const unsigned int cpo_data_position,
+          void set_surface_energy(const unsigned int cpo_data_position,
                                            const ArrayView<double> &data,
                                            const unsigned int mineral_i,
                                            const unsigned int grain_i,
-                                           const double differential_stress) const
+                                           const double surface_energy) const
           {
             data[cpo_data_position + 22 + grain_i * 24 + mineral_i * (n_grains * 24 + 4)] = surface_energy;
           }
 
           inline
-          double get_strain_energy(const unsigned int cpo_data_position,
+          double get_differential_stress(const unsigned int cpo_data_position,
                                              const ArrayView<const double> &data,
                                              const unsigned int mineral_i,
                                              const unsigned int grain_i) const
@@ -910,13 +910,13 @@ namespace aspect
            * @param volume_fractions_grains The value of the volume fraction of a grain to set.
            */
           inline
-          void set_strain_energy(const unsigned int cpo_data_position,
+          void set_differential_stress(const unsigned int cpo_data_position,
                                            const ArrayView<double> &data,
                                            const unsigned int mineral_i,
                                            const unsigned int grain_i,
-                                           const double strain_energy) const
+                                           const double differential_stress) const
           {
-            data[cpo_data_position + 23 + grain_i * 24 + mineral_i * (n_grains * 24 + 4)] = grain_boundary_velocity;
+            data[cpo_data_position + 23 + grain_i * 24 + mineral_i * (n_grains * 24 + 4)] = differential_stress;
           }          
 
           /**
@@ -1228,25 +1228,7 @@ namespace aspect
           * Parameters required to initialize the grain size and orientations for options other than "Random         
           */
 
-          std::string initial_orientation_input_file; // File containing orientations that be used to initialize the distribution with.
-          
-          // For initializing the grain size with a normal distribution
-          double normal_distribution_mean;
-          double normal_distribution_standard_deviation.
-
-          // For initializing the grain size with a lognormal distribution
-          double lognormal_distribution_mean;
-          double lognormal_distribution_standard_deviation.
-          
-          // For initializing the grain size with a uniform  distribution
-          double uniform_distribution_max;
-          double uniform_distribution_min;
-
-          /**
-          * Parameters required to initialize the grain size and orientations for options other than "Random         
-          */
-
-          std::string initial_orientation_input_file; // File containing orientations that be used to initialize the distribution with.
+          std::string input_orientation_file; // File containing orientations that be used to initialize the distribution with.
           
           // For initializing the grain size with a normal distribution
           double normal_distribution_mean;
@@ -1259,8 +1241,12 @@ namespace aspect
           // For initializing the grain size with a uniform  distribution
           double uniform_distribution_max;
           double uniform_distribution_min;
-          
-          std::string input_orientation_file;
+
+          /**
+          * Parameters required to initialize the grain size and orientations for options other than "Random         
+          */
+
+         
           /**
           * Other D-Rex^{++} specific parameters
           * 
@@ -1296,11 +1282,6 @@ namespace aspect
            * Object that handles phase transitions.
            */
           std::shared_ptr<MaterialModel::MaterialUtilities::PhaseFunction<dim>> phase_function;
-          /** @} */
-
-          //MaterialModel::MaterialUtilities::PhaseFunction<dim> phase_function;          //Commented_lines
-          
-          
           /** @} */
 
       };
