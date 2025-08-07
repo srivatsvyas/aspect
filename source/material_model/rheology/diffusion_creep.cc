@@ -108,7 +108,7 @@ namespace aspect
         const DiffusionCreepParameters p = compute_creep_parameters(composition,
                                                                     phase_function_values,
                                                                     n_phase_transitions_per_composition);
-          std::cout<<"grain size used in diffusion creep = "<<grain_size<<std::endl;
+         // std::cout<<"grain size used in diffusion creep = "<<grain_size<<std::endl;
         // Power law creep equation
         //    viscosity = 0.5 * A^(-1) * d^(m) * exp((E + P*V)/(RT))
         // A: prefactor,
