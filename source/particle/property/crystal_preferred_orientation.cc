@@ -168,7 +168,7 @@ namespace aspect
         std::vector<std::vector<double >>surface_energy(n_minerals);
         std::vector<std::vector<double >>grain_boundary_velocity(n_minerals);
         std::vector<std::vector<double >>grain_size_change(n_minerals);
-        std::vector<std::vector<double >>dislocation_density(n_minerals);
+        std::vector<std::vector< std::array<double,4> >>dislocation_density(n_minerals);
         std::vector<std::vector<double >>strain_accumulated(n_minerals);
         std::vector<std::vector<double >>energy_ratio(n_minerals);
         
@@ -312,7 +312,12 @@ namespace aspect
                       surface_energy[mineral_i][grain_i] =0.;
                       grain_boundary_velocity[mineral_i][grain_i] = 0.;
                       grain_size_change[mineral_i][grain_i]= 0.;
-                      dislocation_density[mineral_i][grain_i] =0.;
+          
+                      for(unsigned int slip_system_i = 0; slip_system_i < 4; ++slip_system_i )
+                      {
+                        dislocation_density[mineral_i][grain_i] = initial_dislocation_density;
+                      }
+          
                       strain_accumulated[mineral_i][grain_i] =0.;
                       energy_ratio[mineral_i][grain_i] =0.;
                   }
@@ -342,6 +347,12 @@ namespace aspect
 
                       // set a uniform random rotation_matrix per grain
                       this->compute_random_rotation_matrix(rotation_matrices_grains[mineral_i][grain_i]);
+                      
+                      for(unsigned int slip_system_i = 0; slip_system_i < 4; ++slip_system_i )
+                      {
+                        dislocation_density[mineral_i][grain_i] = initial_dislocation_density;
+                      }
+
                       grain_status[mineral_i][grain_i] = 0;
                       strain_rate_ratio[mineral_i][grain_i] = 0.;
                       viscosity_ratio[mineral_i][grain_i] = 0.;
@@ -387,7 +398,10 @@ namespace aspect
                     data.emplace_back(surface_energy[mineral_i][grain_i]);
                     data.emplace_back(grain_boundary_velocity[mineral_i][grain_i]);
                     data.emplace_back(grain_size_change[mineral_i][grain_i]);
-                    data.emplace_back(dislocation_density[mineral_i][grain_i]);
+                    for (unsigned int slip_system_i = 0; slip_system_i < 4 ; ++slip_system_i)
+                    {
+                      data.emplace_back(dislocation_density[mineral_i][grain_i][slip_system_i]);
+                    }
                     data.emplace_back(strain_accumulated[mineral_i][grain_i]);
                     data.emplace_back(energy_ratio[mineral_i][grain_i]);
                 }
@@ -655,7 +669,10 @@ namespace aspect
                 property_information.emplace_back("cpo mineral " + std::to_string(mineral_i) + " grain " + std::to_string(grain_i) + " surface energy",1);
                 property_information.emplace_back("cpo mineral " + std::to_string(mineral_i) + " grain " + std::to_string(grain_i) + " grain boundary velocity",1);
                 property_information.emplace_back("cpo mineral " + std::to_string(mineral_i) + " grain " + std::to_string(grain_i) + " grain size change",1);
-                property_information.emplace_back("cpo mineral " + std::to_string(mineral_i) + " grain " + std::to_string(grain_i) + " dislocation density",1);
+                for (unsigned int slip_system_i = 0; slip_system_i < 4 ; ++slip_system_i)
+                    {
+                      property_information.emplace_back("cpo mineral " + std::to_string(mineral_i) + " grain " + std::to_string(grain_i) + " dislocation density " + std::to_string(slip_system_i),1);
+                    }
                 property_information.emplace_back("cpo mineral " + std::to_string(mineral_i) + " grain " + std::to_string(grain_i) + " strain accumulated",1);
                 property_information.emplace_back("cpo mineral " + std::to_string(mineral_i) + " grain " + std::to_string(grain_i) + " energy_ratio",1);
               }
@@ -1644,11 +1661,11 @@ namespace aspect
         const std::array<double, 4> &tau = ref_resolved_shear_stress;
         std::vector<SymmetricTensor<2,3>> dislocation_strain_rate_3d(n_grains);
         std::vector<Tensor<2,3>> dislocation_velocity_gradient_3d(n_grains);
-
+        std::array<unsigned int,4> dislcoation_denisty;
         // Calculating Dislocation creep strain rate for all grains
         const std::array< double, dim > eigenvalues = dealii::eigenvalues(deviatoric_stress);
         const double differential_stress = eigenvalues[0]-eigenvalues[dim-1];
-        const double dislocation_creep = dislocation_factor * std::pow(differential_stress,dislocation_stress_exponent);
+        const double dislocation_creep = dislocation_factor * std::pow(differential_stress,dislocation_stress_exponent); 
 
         for(unsigned int i_grain = 0; i_grain < n_grains; ++i_grain)
         {
@@ -1847,7 +1864,21 @@ namespace aspect
              
 
              // Calculate the amount of strain accumulated by dislocation glide.
-             SymmetricTensor<2,3>d = symmetrize(schmidt_tensor * gamma);
+             Tensor<2,3> spin_contrib;
+             const auto levi =  Utilities::Tensors::levi_civita<3>();
+             Tensor<2,3> rotation_part;
+              for (unsigned int i=0; i<3; ++i)
+                for (unsigned int j=0; j<3; ++j)
+                  {
+                     double val = 0.0;
+                     for (unsigned int k=0; k<3; ++k)
+                     {
+                       val += levi[i][j][k] * spin_vectors[grain_i][k];
+                     }
+                     rotation_part[i][j] = val;
+                  }
+
+             SymmetricTensor<2,3>d = symmetrize((schmidt_tensor * gamma) - rotation_part);
 
              strain_increment[grain_i] = this->get_timestep() * std::sqrt(std::max(-second_invariant(d), 0.));
             
@@ -1867,30 +1898,13 @@ namespace aspect
              // Note tau = RRSS = (tau_m^s/tau_o), this why we get tau^(p-n)
             if (get_volume_fractions_grains(cpo_index,data,mineral_i,grain_i) > 0.)
               {
-                const double non_dimensionalization = std::sqrt(std::max(-second_invariant(d), 0.));                
-                double rho_scale;
-                const double ref_stress = std::pow(non_dimensionalization/dislocation_factor,1.0/dislocation_stress_exponent);
-               const double non_dimensionalization1 = std::sqrt(std::max(-second_invariant(dislocation_strain_rate_3d[grain_i]), 0.));
-
-                rho_scale = std::pow(ref_stress /(0.5 * shear_modulus * burgers_vector),drexpp_exponent_p[mineral_i]);
-                             
-  
-                
-                set_differential_stress(cpo_index,data,mineral_i,grain_i,ref_stress);
-
+               const double r_pipe = std::pow(10,-11.9) * exp(453*std::pow(10,3)/(constants::gas_constant * temperature));
+               const double r_gbs = std::pow(10,2.58) * exp(453*std::pow(10,3)/(constants::gas_constant * temperature));
                 for (unsigned int slip_system_i = 0; slip_system_i < 4; ++slip_system_i)
                   {
-                    const double rhos = rho_scale * std::pow(tau[indices[slip_system_i]]/10.0, -1. *(drexpp_exponent_p[mineral_i]-stress_exponent)) *
-                                                    std::pow(std::abs(beta[indices[slip_system_i]] * gamma/non_dimensionalization),drexpp_exponent_p[mineral_i]/stress_exponent);
-
-                    dislocation_density[grain_i] += rhos;
                     
                   }
                 
-                strain_energy[grain_i] = shear_modulus * burgers_vector * burgers_vector * dislocation_density[grain_i];
-
-                set_dislocation_density(cpo_index,data,mineral_i,grain_i,dislocation_density[grain_i]);
-                set_strain_energy(cpo_index,data,mineral_i,grain_i,strain_energy[grain_i]);
               }
            }
         }

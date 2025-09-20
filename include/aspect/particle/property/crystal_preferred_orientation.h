@@ -1043,6 +1043,33 @@ namespace aspect
              data[cpo_data_position + 27 + grain_i * 24 + mineral_i * (n_grains * 24 + 4)] = energy_ratio;
            }
 
+           inline 
+           std::array<double,4> get_dislocation_density(const unsigned int cpo_data_position,
+                                            const ArrayView<double> &data,
+                                            const unsigned int mineral_i,
+                                            const unsigned int grain_i)const;
+           {
+             std::array<double,4> dislocation_density;
+             for (unsigned int slip_system_i = 0; i < 4; ++slip_system_i)
+              {
+                data[cpo_data_position + 5 + grain_i * 24 + mineral_i * (n_grains * 24 + 4) + i] = dislocation_density[slip_system_i];
+              }
+             return dislocation_density;
+           }
+
+           inline 
+           void set_dislocation_density_grain(const unsigned int cpo_data_position,
+                                            const ArrayView<double> &data,
+                                            const unsigned int mineral_i,
+                                            const unsigned int grain_i,
+                                            std::array<double,4>&dislocation_density)const;
+           {
+               for (unsigned int i = 0; i < 4; ++i)
+              {
+                data[cpo_data_position + 5 + grain_i * 24 + mineral_i * (n_grains * 24 + 4) + i] = dislocation_density[i];
+              }
+           }
+
         private:
           /**
            * Computes a random rotation matrix.
