@@ -382,7 +382,7 @@ namespace aspect
                                                const ArrayView<double> &data,
                                                const unsigned int mineral_i) const
           {
-            return static_cast<DeformationType>(data[cpo_data_position + 0 + mineral_i * (n_grains * 24 + 4)]);
+            return static_cast<DeformationType>(data[cpo_data_position + 0 + mineral_i * (n_grains * 29 + 4)]);
           }
 
           /**
@@ -399,7 +399,7 @@ namespace aspect
                                     const unsigned int mineral_i,
                                     const DeformationType deformation_type) const
           {
-            data[cpo_data_position + 0 + mineral_i * (n_grains * 24 + 4)] = static_cast<double>(deformation_type);
+            data[cpo_data_position + 0 + mineral_i * (n_grains * 29 + 4)] = static_cast<double>(deformation_type);
           }
 
           /**
@@ -414,7 +414,7 @@ namespace aspect
                                              const ArrayView<double> &data,
                                              const unsigned int mineral_i) const
           {
-            return data[cpo_data_position + 1 + mineral_i *(n_grains * 24 + 4)];
+            return data[cpo_data_position + 1 + mineral_i *(n_grains * 29 + 4)];
           }
 
           /**
@@ -431,7 +431,7 @@ namespace aspect
                                            const unsigned int mineral_i,
                                            const double volume_fraction_mineral) const
           {
-            data[cpo_data_position + 1 + mineral_i *(n_grains * 24 + 4)] = volume_fraction_mineral;
+            data[cpo_data_position + 1 + mineral_i *(n_grains * 29 + 4)] = volume_fraction_mineral;
           }
 
           /**
@@ -446,7 +446,7 @@ namespace aspect
                                              const ArrayView<double> &data,
                                              const unsigned int mineral_i) const
           {
-            return data[cpo_data_position + 2 + mineral_i *(n_grains * 24 + 4)];
+            return data[cpo_data_position + 2 + mineral_i *(n_grains * 29 + 4)];
           }
 
           /**
@@ -463,7 +463,7 @@ namespace aspect
                                            const unsigned int mineral_i,
                                            const double recrystalization_size) const
           {
-            data[cpo_data_position + 2 + mineral_i *(n_grains * 24 + 4)] = recrystalization_size;
+            data[cpo_data_position + 2 + mineral_i *(n_grains * 29 + 4)] = recrystalization_size;
           }
 
           /**
@@ -478,7 +478,7 @@ namespace aspect
                                              const ArrayView<double> &data,
                                              const unsigned int mineral_i) const
           {
-            return data[cpo_data_position + 3 + mineral_i *(n_grains * 24 + 4)];
+            return data[cpo_data_position + 3 + mineral_i *(n_grains * 29 + 4)];
           }
 
           /**
@@ -495,7 +495,7 @@ namespace aspect
                                            const unsigned int mineral_i,
                                            const double recrystalization_size) const
           {
-            data[cpo_data_position + 3 + mineral_i *(n_grains * 24 + 4)] = recrystalization_size;
+            data[cpo_data_position + 3 + mineral_i *(n_grains * 29 + 4)] = recrystalization_size;
           }
 
           /**
@@ -512,7 +512,7 @@ namespace aspect
                                              const unsigned int mineral_i,
                                              const unsigned int grain_i) const
           {
-            return data[cpo_data_position + 4 + grain_i * 24 + mineral_i * (n_grains * 24 + 4)];
+            return data[cpo_data_position + 4 + grain_i * 29 + mineral_i * (n_grains * 29 + 4)];
           }
 
           /**
@@ -531,7 +531,7 @@ namespace aspect
                                            const unsigned int grain_i,
                                            const double volume_fractions_grains) const
           {
-            data[cpo_data_position + 4 + grain_i * 24 + mineral_i * (n_grains * 24 + 4)] = volume_fractions_grains;
+            data[cpo_data_position + 4 + grain_i * 29 + mineral_i * (n_grains * 29 + 4)] = volume_fractions_grains;
           }
 
           /**
@@ -553,7 +553,7 @@ namespace aspect
             for (unsigned int i = 0; i < Tensor<2,3>::n_independent_components ; ++i)
               {
                 const dealii::TableIndices<2> index = Tensor<2,3>::unrolled_to_component_indices(i);
-                rotation_matrix[index] = data[cpo_data_position + 5 + grain_i * 24 + mineral_i * (n_grains * 24 + 4) + i];
+                rotation_matrix[index] = data[cpo_data_position + 5 + grain_i * 29 + mineral_i * (n_grains * 29 + 4) + i];
               }
             return rotation_matrix;
           }
@@ -577,7 +577,7 @@ namespace aspect
             for (unsigned int i = 0; i < Tensor<2,3>::n_independent_components ; ++i)
               {
                 const dealii::TableIndices<2> index = Tensor<2,3>::unrolled_to_component_indices(i);
-                data[cpo_data_position + 5 + grain_i * 24 + mineral_i * (n_grains * 24 + 4) + i] = rotation_matrix[index];
+                data[cpo_data_position + 5 + grain_i * 29 + mineral_i * (n_grains * 29 + 4) + i] = rotation_matrix[index];
               }
           }
 
@@ -595,7 +595,7 @@ namespace aspect
                                              const unsigned int mineral_i,
                                              const unsigned int grain_i) const
           {
-            return data[cpo_data_position + 14 + grain_i * 24 + mineral_i * (n_grains * 24 + 4)];
+            return data[cpo_data_position + 14 + grain_i * 29 + mineral_i * (n_grains * 29 + 4)];
           }
 
           /**
@@ -614,434 +614,450 @@ namespace aspect
                                            const unsigned int grain_i,
                                            const int grain_status) const
           {
-            data[cpo_data_position + 14 + grain_i * 24 + mineral_i * (n_grains * 24 + 4)] = grain_status;
+            data[cpo_data_position + 14 + grain_i * 29 + mineral_i * (n_grains * 29 + 4)] = grain_status;
           }
 
           /**
-           * @brief Returns the value in the data array representing the ratio of the straion rates.
+           * @brief Returns the value in the data array representing the recrystallization fraction of a grain.
            *
            * @param cpo_data_position The starting index/position of the cpo data in the particle data vector.
            * @param data The particle data vector.
-           * @param mineral_i The mineral to get the value of the volume fraction of a grain for.
-           * @param grain_i The grain to get the value of the volume fraction of.
+           * @param mineral_i The mineral to get the value of the recrystallization fraction of a grain for.
+           * @param grain_i The grain to get the value of the recrystallization fraction of.
            */
           inline
-          double get_strain_rate_ratio(const unsigned int cpo_data_position,
+          double get_recrystallization_fraction_grains(const unsigned int cpo_data_position,
                                              const ArrayView<const double> &data,
                                              const unsigned int mineral_i,
                                              const unsigned int grain_i) const
           {
-            return data[cpo_data_position + 15 + grain_i * 24 + mineral_i * (n_grains * 24 + 4)];
+            return data[cpo_data_position + 15 + grain_i * 29 + mineral_i * (n_grains * 29 + 4)];
           }
 
           /**
-           * @brief Sets the value in the data array representing the volume fraction of a grain.
+           * @brief Sets the value in the data array representing the recrystallization fraction of a grain.
            *
            * @param cpo_data_position The starting index/position of the cpo data in the particle data vector.
            * @param data The particle data vector.
-           * @param mineral_i The mineral to set the value of the volume fraction of a grain for.
-           * @param grain_i The grain to set the value of the volume fraction of.
-           * @param volume_fractions_grains The value of the volume fraction of a grain to set.
+           * @param mineral_i The mineral to set the value of the recrystallization fraction of a grain for.
+           * @param grain_i The grain to set the value of the recrystallization fraction of.
+           * @param recrystallization_fraction_grains The value of the recrystallization fraction of a grain to set.
            */
           inline
-          void set_strain_rate_ratio(const unsigned int cpo_data_position,
+          void set_recrystallization_fraction_grains(const unsigned int cpo_data_position,
                                            const ArrayView<double> &data,
                                            const unsigned int mineral_i,
                                            const unsigned int grain_i,
-                                           const double strain_rate_ratio) const
+                                           const double recrystallization_fraction_grains) const
           {
-            data[cpo_data_position + 15 + grain_i * 24 + mineral_i * (n_grains * 24 + 4)] = strain_rate_ratio;
+            data[cpo_data_position + 15 + grain_i * 29 + mineral_i * (n_grains * 29 + 4)] = recrystallization_fraction_grains;
           }
 
           
           /**
-           * @brief Returns the value in the data array representing the ratio of the straion rates.
+           * @brief Returns the value in the data array representing the strain accumulated of a grain.
            *
            * @param cpo_data_position The starting index/position of the cpo data in the particle data vector.
            * @param data The particle data vector.
-           * @param mineral_i The mineral to get the value of the volume fraction of a grain for.
-           * @param grain_i The grain to get the value of the volume fraction of.
+           * @param mineral_i The mineral to get the value of the strain accumulated of a grain for.
+           * @param grain_i The grain to get the value of the strain accumulated of.
            */
           inline
-          double get_viscosity_ratio(const unsigned int cpo_data_position,
+          double get_strain_accumulated_grains(const unsigned int cpo_data_position,
                                              const ArrayView<const double> &data,
                                              const unsigned int mineral_i,
                                              const unsigned int grain_i) const
           {
-            return data[cpo_data_position + 16 + grain_i * 24 + mineral_i * (n_grains * 24 + 4)];
+            return data[cpo_data_position + 16 + grain_i * 29 + mineral_i * (n_grains * 29 + 4)];
           }
 
           /**
-           * @brief Sets the value in the data array representing the volume fraction of a grain.
+           * @brief Sets the value in the data array representing the strain accumulated of a grain.
            *
            * @param cpo_data_position The starting index/position of the cpo data in the particle data vector.
            * @param data The particle data vector.
-           * @param mineral_i The mineral to set the value of the volume fraction of a grain for.
-           * @param grain_i The grain to set the value of the volume fraction of.
-           * @param volume_fractions_grains The value of the volume fraction of a grain to set.
+           * @param mineral_i The mineral to set the value of the strain accumulated of a grain for.
+           * @param grain_i The grain to set the value of the strain accumulated of.
+           * @param strain_accumulated_grains The value of the strain accumulated of a grain to set.
            */
           inline
-          void set_viscosity_ratio(const unsigned int cpo_data_position,
+          void set_strain_accumulated_grains(const unsigned int cpo_data_position,
                                            const ArrayView<double> &data,
                                            const unsigned int mineral_i,
                                            const unsigned int grain_i,
-                                           const double viscosity_ratio) const
+                                           const double strain_accumulated_grains) const
           {
-            data[cpo_data_position + 16 + grain_i * 24 + mineral_i * (n_grains * 24 + 4)] = viscosity_ratio;
+            data[cpo_data_position + 15 + grain_i * 29 + mineral_i * (n_grains * 29 + 4)] = strain_accumulated_grains;
           }
 
+          /**
+           * @brief Returns the values in the data array representing the dislocation densities of a grain. //const std::array<double, 4> &tau
+           *
+           * @param cpo_data_position The starting index/position of the cpo data in the particle data vector.
+           * @param data The particle data vector.
+           * @param mineral_i The mineral to get the value of the dislocation densities of a grain for.
+           * @param grain_i The grain to get the value of the dislocation densities of.
+           */
+
+          inline
+          std::array<double, 4> get_dislocation_density_grains(const unsigned int cpo_data_position,
+                                             const ArrayView<const double> &data,
+                                             const unsigned int mineral_i,
+                                             const unsigned int grain_i) const
+          {
+            std::array<double,4> dislocation_density;
+            for (unsigned int slip_system_i = 0; slip_system_i < 4 ; ++slip_system_i)
+              {
+                dislocation_density[slip_system_i] = data[cpo_data_position + 16 + grain_i * 29 + mineral_i * (n_grains * 29 + 4) + slip_system_i];
+              }
+            return dislocation_density;
+          }
+
+          /**
+           * @brief Sets the value in the data array representing the dislocation densities of a grain.
+           *
+           * @param cpo_data_position The starting index/position of the cpo data in the particle data vector.
+           * @param data The particle data vector.
+           * @param mineral_i The mineral to set the value of the dislocation densities of a grain for.
+           * @param grain_i The grain to set the value of the dislocation densities of.
+           * @param dislocation_density The value of the dislocation densities of a grain to set.
+           */
+          inline
+          void set_dislocation_density_grains(const unsigned int cpo_data_position,
+                                           const ArrayView<double> &data,
+                                           const unsigned int mineral_i,
+                                           const unsigned int grain_i,
+                                           const std::array<double,4> &dislocation_density) const
+          {
+            for (unsigned int slip_system_i = 0; slip_system_i < 4 ; ++slip_system_i)
+              {
+                data[cpo_data_position + 16 + grain_i * 29 + mineral_i * (n_grains * 29 + 4) + slip_system_i] = dislocation_density[slip_system_i];
+              }
+          }
+
+          /**
+           * @brief Returns the values in the data array representing the relative slip system activities of a grain. //const std::array<double, 4> &tau
+           *
+           * @param cpo_data_position The starting index/position of the cpo data in the particle data vector.
+           * @param data The particle data vector.
+           * @param mineral_i The mineral to get the value of the relative slip system activities of a grain for.
+           * @param grain_i The grain to get the value of the relative slip system activities of.
+           */
+          inline
+          std::array<double, 4> get_relative_slip_system_activities_grains(const unsigned int cpo_data_position,
+                                             const ArrayView<const double> &data,
+                                             const unsigned int mineral_i,
+                                             const unsigned int grain_i) const
+          {
+            std::array<double,4> relative_slip_system_activities;
+            for (unsigned int slip_system_i = 0; slip_system_i < 4 ; ++slip_system_i)
+              {
+                relative_slip_system_activities[slip_system_i] = data[cpo_data_position + 20 + grain_i * 29 + mineral_i * (n_grains * 29 + 4) + slip_system_i];
+              }
+            return relative_slip_system_activities;
+          }
+
+          /**
+           * @brief Sets the value in the data array representing the relative slip system activities of a grain.
+           *
+           * @param cpo_data_position The starting index/position of the cpo data in the particle data vector.
+           * @param data The particle data vector.
+           * @param mineral_i The mineral to set the value of the relative slip system activities of a grain for.
+           * @param grain_i The grain to set the value of the relative slip system activities of.
+           * @param relative_slip_system_activities The value of the relative slip system activities of a grain to set.
+           */
+          inline
+          void set_relative_slip_system_activities_grains(const unsigned int cpo_data_position,
+                                           const ArrayView<double> &data,
+                                           const unsigned int mineral_i,
+                                           const unsigned int grain_i,
+                                           const std::array<double,4> &relative_slip_system_activities) const
+          {
+            for (unsigned int slip_system_i = 0; slip_system_i < 4 ; ++slip_system_i)
+              {
+                data[cpo_data_position + 20 + grain_i * 29 + mineral_i * (n_grains * 29 + 4) + slip_system_i] = relative_slip_system_activities[slip_system_i];
+              }
+          }
+
+          /**
+           * @brief Returns the value in the data array representing the driving energy associated with strain energy (f_{strain}) of a grain.
+           *
+           * @param cpo_data_position The starting index/position of the cpo data in the particle data vector.
+           * @param data The particle data vector.
+           * @param mineral_i The mineral to get the value of the f_{strain} of a grain for.
+           * @param grain_i The grain to get the value of the f_{strain} of.
+           */
+          inline
+          double get_fstrain_grains(const unsigned int cpo_data_position,
+                                             const ArrayView<const double> &data,
+                                             const unsigned int mineral_i,
+                                             const unsigned int grain_i) const
+          {
+            return data[cpo_data_position + 25 + grain_i * 29 + mineral_i * (n_grains * 29 + 4)];
+          }
+
+          /**
+           * @brief Sets the value in the data array representing the driving energy associated with strain energy (f_{strain}) of a grain.
+           *
+           * @param cpo_data_position The starting index/position of the cpo data in the particle data vector.
+           * @param data The particle data vector.
+           * @param mineral_i The mineral to set the value of the f_{strain} of a grain for.
+           * @param grain_i The grain to set the value of the f_{strain} of.
+           * @param fstrain_grains The value of the f_{strain} of a grain to set.
+           */
+          inline
+          void set_fstrain_grains(const unsigned int cpo_data_position,
+                                           const ArrayView<double> &data,
+                                           const unsigned int mineral_i,
+                                           const unsigned int grain_i,
+                                           const double fstrain_grains) const
+          {
+            data[cpo_data_position + 25 + grain_i * 29 + mineral_i * (n_grains * 29 + 4)] = fstrain_grains;
+          }
+
+          /**
+           * @brief Returns the value in the data array representing the driving energy associated with surface energy (f_{surface}) of a grain.
+           *
+           * @param cpo_data_position The starting index/position of the cpo data in the particle data vector.
+           * @param data The particle data vector.
+           * @param mineral_i The mineral to get the value of the f_{surface} of a grain for.
+           * @param grain_i The grain to get the value of the f_{surface} of.
+           */
+          inline
+          double get_fsurface_grains(const unsigned int cpo_data_position,
+                                             const ArrayView<const double> &data,
+                                             const unsigned int mineral_i,
+                                             const unsigned int grain_i) const
+          {
+            return data[cpo_data_position + 26 + grain_i * 29 + mineral_i * (n_grains * 29 + 4)];
+          }
+
+          /**
+           * @brief Sets the value in the data array representing the driving energy associated with surface energy (f_{surface}) of a grain.
+           *
+           * @param cpo_data_position The starting index/position of the cpo data in the particle data vector.
+           * @param data The particle data vector.
+           * @param mineral_i The mineral to set the value of the f_{surface} of a grain for.
+           * @param grain_i The grain to set the value of the f_{surface} of.
+           * @param fstrain_grains The value of the f_{surface} of a grain to set.
+           */
+          inline
+          void set_fsurface_grains(const unsigned int cpo_data_position,
+                                           const ArrayView<double> &data,
+                                           const unsigned int mineral_i,
+                                           const unsigned int grain_i,
+                                           const double fsurface_grains) const
+          {
+            data[cpo_data_position + 26 + grain_i * 29 + mineral_i * (n_grains * 29 + 4)] = fsurface_grains;
+          }
+
+          inline
+          double get_strain_rate_ratio_grains(const unsigned int cpo_data_position,
+                                             const ArrayView<const double> &data,
+                                             const unsigned int mineral_i,
+                                             const unsigned int grain_i) const
+          {
+            return data[cpo_data_position + 27 + grain_i * 29 + mineral_i * (n_grains * 29 + 4)];
+          }
           
           /**
-           * @brief Returns the value in the data array representing the ratio of the straion rates.
+           * @brief Sets the value in the data array representing the driving energy associated with surface energy (f_{surface}) of a grain.
            *
            * @param cpo_data_position The starting index/position of the cpo data in the particle data vector.
            * @param data The particle data vector.
-           * @param mineral_i The mineral to get the value of the volume fraction of a grain for.
-           * @param grain_i The grain to get the value of the volume fraction of.
+           * @param mineral_i The mineral to set the value of the f_{surface} of a grain for.
+           * @param grain_i The grain to set the value of the f_{surface} of.
+           * @param fstrain_grains The value of the f_{surface} of a grain to set.
            */
           inline
-          double get_grain_boundary_velocity(const unsigned int cpo_data_position,
+          void set_strain_rate_ratio_grains(const unsigned int cpo_data_position,
+                                           const ArrayView<double> &data,
+                                           const unsigned int mineral_i,
+                                           const unsigned int grain_i,
+                                           const double strain_rate_ratio_grains) const
+          {
+            data[cpo_data_position + 27 + grain_i * 29 + mineral_i * (n_grains * 29 + 4)] = strain_rate_ratio_grains;
+          }
+
+          /**
+           * @brief Returns the value in the data array representing the ratio of dislocation creep vs total strain rate (\dot{epsilon}_{ratio}) of a grain.
+           *
+           * @param cpo_data_position The starting index/position of the cpo data in the particle data vector.
+           * @param data The particle data vector.
+           * @param mineral_i The mineral to get the value of the \dot{epsilon}_{ratio} of a grain for.
+           * @param grain_i The grain to get the value of the \dot{epsilon}_{ratio} of.
+           */
+          inline
+          double get_slip_rate_grains(const unsigned int cpo_data_position,
                                              const ArrayView<const double> &data,
                                              const unsigned int mineral_i,
                                              const unsigned int grain_i) const
           {
-            return data[cpo_data_position + 17 + grain_i * 24 + mineral_i * (n_grains * 24 + 4)];
+            return data[cpo_data_position + 28 + grain_i * 29 + mineral_i * (n_grains * 29 + 4)];
           }
-
-          /**
-           * @brief Sets the value in the data array representing the volume fraction of a grain.
-           *
-           * @param cpo_data_position The starting index/position of the cpo data in the particle data vector.
-           * @param data The particle data vector.
-           * @param mineral_i The mineral to set the value of the volume fraction of a grain for.
-           * @param grain_i The grain to set the value of the volume fraction of.
-           * @param volume_fractions_grains The value of the volume fraction of a grain to set.
-           */
-          inline
-          void set_grain_boundary_velocity(const unsigned int cpo_data_position,
-                                           const ArrayView<double> &data,
-                                           const unsigned int mineral_i,
-                                           const unsigned int grain_i,
-                                           const double grain_boundary_velocity) const
-          {
-            data[cpo_data_position + 17 + grain_i * 24 + mineral_i * (n_grains * 24 + 4)] = grain_boundary_velocity;
-          }
-
-          /**
-           * @brief Returns the value in the data array representing the volume fraction 3f a grain.
-           *
-           * @param cpo_data_position The starting index/position of the cpo data in the particle data vector.
-           * @param data The particle data vector.
-           * @param mineral_i The mineral to get the value of the volume fraction of a grain for.
-           * @param grain_i The grain to get the value of the volume fraction of.
-           */
-          inline
-          double get_rx_fractions(const unsigned int cpo_data_position,
-                                             const ArrayView<const double> &data,
-                                             const unsigned int mineral_i,
-                                             const unsigned int grain_i) const
-          {
-            return data[cpo_data_position + 18 + grain_i * 24 + mineral_i * (n_grains * 24 + 4)];
-          }
-
-          /**
-           * @brief Sets the value in the data array representing the volume fraction of a grain.
-           *
-           * @param cpo_data_position The starting index/position of the cpo data in the particle data vector.
-           * @param data The particle data vector.
-           * @param mineral_i The mineral to set the value of the volume fraction of a grain for.
-           * @param grain_i The grain to set the value of the volume fraction of.
-           * @param volume_fractions_grains The value of the volume fraction of a grain to set.
-           */
-          inline
-          void set_rx_fractions(const unsigned int cpo_data_position,
-                                           const ArrayView<double> &data,
-                                           const unsigned int mineral_i,
-                                           const unsigned int grain_i,
-                                           const double rx_fractions) const
-          {
-            data[cpo_data_position + 18 + grain_i * 24 + mineral_i * (n_grains * 24 + 4)] = rx_fractions;
-          }
-
-          // After this, all properties stored to the cpo array is purely for the purpose of visualizing the evolution of different model parameters for verification and not needed for running the model
-           /**
-           * @brief Returns the value in the data array representing the volume fraction 3f a grain.
-           *
-           * @param cpo_data_position The starting index/position of the cpo data in the particle data vector.
-           * @param data The particle data vector.
-           * @param mineral_i The mineral to get the value of the volume fraction of a grain for.
-           * @param grain_i The grain to get the value of the volume fraction of.
-           */
-          inline
-          int get_active_slip_system(const unsigned int cpo_data_position,
-                                             const ArrayView<const double> &data,
-                                             const unsigned int mineral_i,
-                                             const unsigned int grain_i) const
-          {
-            return data[cpo_data_position + 19 + grain_i * 24 + mineral_i * (n_grains * 24 + 4)];
-          }
-
-          /**
-           * @brief Sets the value in the data array representing the volume fraction of a grain.
-           *
-           * @param cpo_data_position The starting index/position of the cpo data in the particle data vector.
-           * @param data The particle data vector.
-           * @param mineral_i The mineral to set the value of the volume fraction of a grain for.
-           * @param grain_i The grain to set the value of the volume fraction of.
-           * @param volume_fractions_grains The value of the volume fraction of a grain to set.
-           */
-          inline
-          void set_active_slip_system(const unsigned int cpo_data_position,
-                                           const ArrayView<double> &data,
-                                           const unsigned int mineral_i,
-                                           const unsigned int grain_i,
-                                           const int active_slip_system) const
-          {
-            data[cpo_data_position + 19 + grain_i * 24 + mineral_i * (n_grains * 24 + 4)] = active_slip_system;
-          }
-
-          // After this, all properties stored to the cpo array is purely for the purpose of visualizing the evolution of different model parameters for verification and not needed for running the model
-           /**
-           * @brief Returns the value in the data array representing the volume fraction 3f a grain.
-           *
-           * @param cpo_data_position The starting index/position of the cpo data in the particle data vector.
-           * @param data The particle data vector.
-           * @param mineral_i The mineral to get the value of the volume fraction of a grain for.
-           * @param grain_i The grain to get the value of the volume fraction of.
-           */
-          inline
-          double get_strain_rate(const unsigned int cpo_data_position,
-                                             const ArrayView<const double> &data,
-                                             const unsigned int mineral_i,
-                                             const unsigned int grain_i) const
-          {
-            return data[cpo_data_position + 20 + grain_i * 24 + mineral_i * (n_grains * 24 + 4)];
-          }
-
-          /**
-           * @brief Sets the value in the data array representing the volume fraction of a grain.
-           *
-           * @param cpo_data_position The starting index/position of the cpo data in the particle data vector.
-           * @param data The particle data vector.
-           * @param mineral_i The mineral to set the value of the volume fraction of a grain for.
-           * @param grain_i The grain to set the value of the volume fraction of.
-           * @param volume_fractions_grains The value of the volume fraction of a grain to set.
-           */
-          inline
-          void set_strain_rate(const unsigned int cpo_data_position,
-                                           const ArrayView<double> &data,
-                                           const unsigned int mineral_i,
-                                           const unsigned int grain_i,
-                                           const double strain_rate) const
-          {
-            data[cpo_data_position + 20 + grain_i * 24 + mineral_i * (n_grains * 24 + 4)] = strain_rate;
-          }
-
-          inline
-          double get_strain_energy(const unsigned int cpo_data_position,
-                                             const ArrayView<const double> &data,
-                                             const unsigned int mineral_i,
-                                             const unsigned int grain_i) const
-          {
-            return data[cpo_data_position + 21 + grain_i * 24 + mineral_i * (n_grains * 24 + 4)];
-          }
-
-          /**
-           * @brief Sets the value in the data array representing the volume fraction of a grain.
-           *
-           * @param cpo_data_position The starting index/position of the cpo data in the particle data vector.
-           * @param data The particle data vector.
-           * @param mineral_i The mineral to get the value of the volume fraction of a grain for.
-           * @param grain_i The grain to get the value of the volume fraction of.
-           */
-          inline
-          void set_strain_energy(const unsigned int cpo_data_position,
-                                           const ArrayView<double> &data,
-                                           const unsigned int mineral_i,
-                                           const unsigned int grain_i,
-                                           const double strain_energy) const
-          {
-            data[cpo_data_position + 21 + grain_i * 24 + mineral_i * (n_grains * 24 + 4)] = strain_energy;
-          }
-
-          inline
-          double get_surface_energy(const unsigned int cpo_data_position,
-                                             const ArrayView<const double> &data,
-                                             const unsigned int mineral_i,
-                                             const unsigned int grain_i) const
-          {
-            return data[cpo_data_position + 22 + grain_i * 24 + mineral_i * (n_grains * 24 + 4)];
-          }
-
-          /**
-           * @brief Sets the value in the data array representing the volume fraction of a grain.
-           *
-           * @param cpo_data_position The starting index/position of the cpo data in the particle data vector.
-           * @param data The particle data vector.
-           * @param mineral_i The mineral to set the value of the volume fraction of a grain for.
-           * @param grain_i The grain to set the value of the volume fraction of.
-           * @param volume_fractions_grains The value of the volume fraction of a grain to set.
-           */
-          inline
-          void set_surface_energy(const unsigned int cpo_data_position,
-                                           const ArrayView<double> &data,
-                                           const unsigned int mineral_i,
-                                           const unsigned int grain_i,
-                                           const double surface_energy) const
-          {
-            data[cpo_data_position + 22 + grain_i * 24 + mineral_i * (n_grains * 24 + 4)] = surface_energy;
-          }
-
-          inline
-          double get_differential_stress(const unsigned int cpo_data_position,
-                                             const ArrayView<const double> &data,
-                                             const unsigned int mineral_i,
-                                             const unsigned int grain_i) const
-          {
-            return data[cpo_data_position + 23 + grain_i * 24 + mineral_i * (n_grains * 24 + 4)];
-          }
-
-          /**
-           * @brief Sets the value in the data array representing the volume fraction of a grain.
-           *
-           * @param cpo_data_position The starting index/position of the cpo data in the particle data vector.
-           * @param data The particle data vector.
-           * @param mineral_i The mineral to set the value of the volume fraction of a grain for.
-           * @param grain_i The grain to set the value of the volume fraction of.
-           * @param volume_fractions_grains The value of the volume fraction of a grain to set.
-           */
-          inline
-          void set_differential_stress(const unsigned int cpo_data_position,
-                                           const ArrayView<double> &data,
-                                           const unsigned int mineral_i,
-                                           const unsigned int grain_i,
-                                           const double differential_stress) const
-          {
-            data[cpo_data_position + 23 + grain_i * 24 + mineral_i * (n_grains * 24 + 4)] = differential_stress;
-          }          
-
-          /**
-           * @brief Sets the value in the data array representing the volume fraction of a grain.
-           *
-           * @param cpo_data_position The starting index/position of the cpo data in the particle data vector.
-           * @param data The particle data vector.
-           * @param mineral_i The mineral to set the value of the volume fraction of a grain for.
-           * @param grain_i The grain to set the value of the volume fraction of.
-           * @param volume_fractions_grains The value of the volume fraction of a grain to set.
-           */
           
-           inline
-           double get_grain_size_change(const unsigned int cpo_data_position,
-                                              const ArrayView<const double> &data,
-                                              const unsigned int mineral_i,
-                                              const unsigned int grain_i) const
-           {
-             return data[cpo_data_position + 24 + grain_i * 24 + mineral_i * (n_grains * 24 + 4)];
-           }
- 
-           /**
-            * @brief Sets the value in the data array representing the volume fraction of a grain.
-            *
-            * @param cpo_data_position The starting index/position of the cpo data in the particle data vector.
-            * @param data The particle data vector.
-            * @param mineral_i The mineral to set the value of the volume fraction of a grain for.
-            * @param grain_i The grain to set the value of the volume fraction of.
-            * @param volume_fractions_grains The value of the volume fraction of a grain to set.
-            */
-           inline
-           void set_grain_size_change(const unsigned int cpo_data_position,
-                                            const ArrayView<double> &data,
-                                            const unsigned int mineral_i,
-                                            const unsigned int grain_i,
-                                            const double grain_size_change) const
-           {
-             data[cpo_data_position + 24 + grain_i * 24 + mineral_i * (n_grains * 24 + 4)] = grain_size_change;
-           }
+          /**
+           * @brief Sets the value in the data array representing the driving energy associated with surface energy (f_{surface}) of a grain.
+           *
+           * @param cpo_data_position The starting index/position of the cpo data in the particle data vector.
+           * @param data The particle data vector.
+           * @param mineral_i The mineral to set the value of the f_{surface} of a grain for.
+           * @param grain_i The grain to set the value of the f_{surface} of.
+           * @param fstrain_grains The value of the f_{surface} of a grain to set.
+           */
+          inline
+          void set_slip_rate_grains(const unsigned int cpo_data_position,
+                                           const ArrayView<double> &data,
+                                           const unsigned int mineral_i,
+                                           const unsigned int grain_i,
+                                           const double slip_rate_grains) const
+          {
+            data[cpo_data_position + 28 + grain_i * 29 + mineral_i * (n_grains * 29 + 4)] = slip_rate_grains;
+          }
 
+          /**
+           * @brief Returns the value in the data array representing the ratio of dislocation creep vs total strain rate (\dot{epsilon}_{ratio}) of a grain.
+           *
+           * @param cpo_data_position The starting index/position of the cpo data in the particle data vector.
+           * @param data The particle data vector.
+           * @param mineral_i The mineral to get the value of the \dot{epsilon}_{ratio} of a grain for.
+           * @param grain_i The grain to get the value of the \dot{epsilon}_{ratio} of.
+           */
+          inline
+          double get_differential_stress_grains(const unsigned int cpo_data_position,
+                                             const ArrayView<const double> &data,
+                                             const unsigned int mineral_i,
+                                             const unsigned int grain_i) const
+          {
+            return data[cpo_data_position + 29 + grain_i * 29 + mineral_i * (n_grains * 29 + 4)];
+          }
           
-           inline
-           double get_dislocation_density(const unsigned int cpo_data_position,
-                                              const ArrayView<const double> &data,
-                                              const unsigned int mineral_i,
-                                              const unsigned int grain_i) const
-           {
-             return data[cpo_data_position + 25 + grain_i * 24 + mineral_i * (n_grains * 24 + 4)];
-           }
- 
-           /**
-            * @brief Sets the value in the data array representing the volume fraction of a grain.
-            *
-            * @param cpo_data_position The starting index/position of the cpo data in the particle data vector.
-            * @param data The particle data vector.
-            * @param mineral_i The mineral to set the value of the volume fraction of a grain for.
-            * @param grain_i The grain to set the value of the volume fraction of.
-            * @param volume_fractions_grains The value of the volume fraction of a grain to set.
-            */
-           inline
-           void set_dislocation_density(const unsigned int cpo_data_position,
-                                            const ArrayView<double> &data,
-                                            const unsigned int mineral_i,
-                                            const unsigned int grain_i,
-                                            const double dislocation_density) const
-           {
-             data[cpo_data_position + 25 + grain_i * 24 + mineral_i * (n_grains * 24 + 4)] = dislocation_density;
-           }
+          /**
+           * @brief Sets the value in the data array representing the driving energy associated with surface energy (f_{surface}) of a grain.
+           *
+           * @param cpo_data_position The starting index/position of the cpo data in the particle data vector.
+           * @param data The particle data vector.
+           * @param mineral_i The mineral to set the value of the f_{surface} of a grain for.
+           * @param grain_i The grain to set the value of the f_{surface} of.
+           * @param fstrain_grains The value of the f_{surface} of a grain to set.
+           */
+          inline
+          void set_differential_stress_grains(const unsigned int cpo_data_position,
+                                           const ArrayView<double> &data,
+                                           const unsigned int mineral_i,
+                                           const unsigned int grain_i,
+                                           const double differential_stress_grains) const
+          {
+            data[cpo_data_position + 29 + grain_i * 29 + mineral_i * (n_grains * 29 + 4)] = differential_stress_grains;
+          }
 
-           inline
-           double get_strain_accumulated(const unsigned int cpo_data_position,
-                                              const ArrayView<const double> &data,
-                                              const unsigned int mineral_i,
-                                              const unsigned int grain_i) const
-           {
-             return data[cpo_data_position + 26 + grain_i * 24 + mineral_i * (n_grains * 24 + 4)];
-           }
- 
-           /**
-            * @brief Sets the value in the data array representing the volume fraction of a grain.
-            *
-            * @param cpo_data_position The starting index/position of the cpo data in the particle data vector.
-            * @param data The particle data vector.
-            * @param mineral_i The mineral to set the value of the volume fraction of a grain for.
-            * @param grain_i The grain to set the value of the volume fraction of.
-            * @param volume_fractions_grains The value of the volume fraction of a grain to set.
-            */
-           inline
-           void set_strain_accumulated(const unsigned int cpo_data_position,
-                                            const ArrayView<double> &data,
-                                            const unsigned int mineral_i,
-                                            const unsigned int grain_i,
-                                            const double strain_accumulated) const
-           {
-             data[cpo_data_position + 26 + grain_i * 24 + mineral_i * (n_grains * 24 + 4)] = strain_accumulated;
-           }
+          /**
+           * @brief Returns the value in the data array representing the ratio of dislocation creep vs total strain rate (\dot{epsilon}_{ratio}) of a grain.
+           *
+           * @param cpo_data_position The starting index/position of the cpo data in the particle data vector.
+           * @param data The particle data vector.
+           * @param mineral_i The mineral to get the value of the \dot{epsilon}_{ratio} of a grain for.
+           * @param grain_i The grain to get the value of the \dot{epsilon}_{ratio} of.
+           */
+          inline
+          double get_energy_ratio_grains(const unsigned int cpo_data_position,
+                                             const ArrayView<const double> &data,
+                                             const unsigned int mineral_i,
+                                             const unsigned int grain_i) const
+          {
+            return data[cpo_data_position + 30 + grain_i * 29 + mineral_i * (n_grains * 29 + 4)];
+          }
+          
+          /**
+           * @brief Sets the value in the data array representing the driving energy associated with surface energy (f_{surface}) of a grain.
+           *
+           * @param cpo_data_position The starting index/position of the cpo data in the particle data vector.
+           * @param data The particle data vector.
+           * @param mineral_i The mineral to set the value of the f_{surface} of a grain for.
+           * @param grain_i The grain to set the value of the f_{surface} of.
+           * @param fstrain_grains The value of the f_{surface} of a grain to set.
+           */
+          inline
+          void set_energy_ratio_grains(const unsigned int cpo_data_position,
+                                           const ArrayView<double> &data,
+                                           const unsigned int mineral_i,
+                                           const unsigned int grain_i,
+                                           const double energy_ratio_grains) const
+          {
+            data[cpo_data_position + 30 + grain_i * 29 + mineral_i * (n_grains * 29 + 4)] = energy_ratio_grains;
+          }
 
-           inline
-           double get_energy_ratio(const unsigned int cpo_data_position,
-                                              const ArrayView<const double> &data,
-                                              const unsigned int mineral_i,
-                                              const unsigned int grain_i) const
-           {
-             return data[cpo_data_position + 27 + grain_i * 24 + mineral_i * (n_grains * 24 + 4)];
-           }
- 
-           /**
-            * @brief Sets the value in the data array representing the volume fraction of a grain.
-            *
-            * @param cpo_data_position The starting index/position of the cpo data in the particle data vector.
-            * @param data The particle data vector.
-            * @param mineral_i The mineral to set the value of the volume fraction of a grain for.
-            * @param grain_i The grain to set the value of the volume fraction of.
-            * @param volume_fractions_grains The value of the volume fraction of a grain to set.
-            */
-           inline
-           void set_energy_ratio(const unsigned int cpo_data_position,
-                                            const ArrayView<double> &data,
-                                            const unsigned int mineral_i,
-                                            const unsigned int grain_i,
-                                            const double energy_ratio) const
-           {
-             data[cpo_data_position + 27 + grain_i * 24 + mineral_i * (n_grains * 24 + 4)] = energy_ratio;
-           }
+          /**
+           * @brief Returns the value in the data array representing the ratio of dislocation creep vs total strain rate (\dot{epsilon}_{ratio}) of a grain.
+           *
+           * @param cpo_data_position The starting index/position of the cpo data in the particle data vector.
+           * @param data The particle data vector.
+           * @param mineral_i The mineral to get the value of the \dot{epsilon}_{ratio} of a grain for.
+           * @param grain_i The grain to get the value of the \dot{epsilon}_{ratio} of.
+           */
+          inline
+          int get_n_recrystalized_grains(const unsigned int cpo_data_position,
+                                             const ArrayView<const double> &data,
+                                             const unsigned int mineral_i,
+                                             const unsigned int grain_i) const
+          {
+            return data[cpo_data_position + 31 + grain_i * 29 + mineral_i * (n_grains * 29 + 4)];
+          }
+          
+          /**
+           * @brief Sets the value in the data array representing the driving energy associated with surface energy (f_{surface}) of a grain.
+           *
+           * @param cpo_data_position The starting index/position of the cpo data in the particle data vector.
+           * @param data The particle data vector.
+           * @param mineral_i The mineral to set the value of the f_{surface} of a grain for.
+           * @param grain_i The grain to set the value of the f_{surface} of.
+           * @param fstrain_grains The value of the f_{surface} of a grain to set.
+           */
+          inline
+          void set_n_recrystalized_grains(const unsigned int cpo_data_position,
+                                           const ArrayView<double> &data,
+                                           const unsigned int mineral_i,
+                                           const unsigned int grain_i,
+                                           const int n_recrystalized_grains) const
+          {
+            data[cpo_data_position + 31 + grain_i * 29 + mineral_i * (n_grains * 29 + 4)] = n_recrystalized_grains;
+          }
+
+          /**
+           * @brief Returns the value in the data array representing the ratio of dislocation creep vs total strain rate (\dot{epsilon}_{ratio}) of a grain.
+           *
+           * @param cpo_data_position The starting index/position of the cpo data in the particle data vector.
+           * @param data The particle data vector.
+           * @param mineral_i The mineral to get the value of the \dot{epsilon}_{ratio} of a grain for.
+           * @param grain_i The grain to get the value of the \dot{epsilon}_{ratio} of.
+           */
+          inline
+          int get_parent_grains(const unsigned int cpo_data_position,
+                                             const ArrayView<const double> &data,
+                                             const unsigned int mineral_i,
+                                             const unsigned int grain_i) const
+          {
+            return data[cpo_data_position + 32 + grain_i * 29 + mineral_i * (n_grains * 29 + 4)];
+          }
+          
+          /**
+           * @brief Sets the value in the data array representing the driving energy associated with surface energy (f_{surface}) of a grain.
+           *
+           * @param cpo_data_position The starting index/position of the cpo data in the particle data vector.
+           * @param data The particle data vector.
+           * @param mineral_i The mineral to set the value of the f_{surface} of a grain for.
+           * @param grain_i The grain to set the value of the f_{surface} of.
+           * @param fstrain_grains The value of the f_{surface} of a grain to set.
+           */
+          inline
+          void set_parent_grains(const unsigned int cpo_data_position,
+                                           const ArrayView<double> &data,
+                                           const unsigned int mineral_i,
+                                           const unsigned int grain_i,
+                                           const int parent_grains) const
+          {
+            data[cpo_data_position + 32 + grain_i * 29 + mineral_i * (n_grains * 29 + 4)] = parent_grains;
+          }
 
         private:
           /**
