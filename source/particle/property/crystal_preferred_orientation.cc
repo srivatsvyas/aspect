@@ -799,21 +799,21 @@ namespace aspect
                         {
                         if(get_energy_ratio(cpo_index,data,mineral_i,grain_i) >= 1.)// get_bulk_recrystalization_grain_size_mineral(cpo_index,data,mineral_i))
                         {
-                          if(std::abs(dt * (( numbers::PI * std::pow(vf_new* 0.5,2.))/area_sum) * derivatives.first[grain_i]) >= get_bulk_recrystalization_grain_size_mineral(cpo_index,data,mineral_i))  
+                          if(std::abs(dt * (( numbers::PI * std::pow(vf_new* 0.5,2.))/area_sum) * derivatives.first[grain_i]) <= get_bulk_recrystalization_grain_size_mineral(cpo_index,data,mineral_i))  
                            {
                             vf_new = get_volume_fractions_grains(cpo_index,data,mineral_i,grain_i) + dt * (( numbers::PI * std::pow(vf_new* 0.5,2.))/area_sum) * derivatives.first[grain_i];
                             set_grain_size_change(cpo_index,data,mineral_i,grain_i, dt * (( numbers::PI * std::pow(vf_new* 0.5,2.))/area_sum) * derivatives.first[grain_i]);
                            }
                           else
                           {
-                            if((dt * (( numbers::PI * std::pow(vf_new* 0.5,2.))/area_sum) * derivatives.first[grain_i]) < 0)
+                            if( derivatives.first[grain_i] < 0)
                           {
                             vf_new = get_volume_fractions_grains(cpo_index,data,mineral_i,grain_i) - get_bulk_recrystalization_grain_size_mineral(cpo_index,data,mineral_i);
                             set_grain_size_change(cpo_index,data,mineral_i,grain_i, -1.0 * get_bulk_recrystalization_grain_size_mineral(cpo_index,data,mineral_i));
                             break;
                           }
                           else 
-                          if((dt * (( numbers::PI * std::pow(vf_new* 0.5,2.))/area_sum) * derivatives.first[grain_i]) > 1.0)
+                          if( derivatives.first[grain_i] > 0.0)
                           {
                             vf_new = get_volume_fractions_grains(cpo_index,data,mineral_i,grain_i) + get_bulk_recrystalization_grain_size_mineral(cpo_index,data,mineral_i);
                             set_grain_size_change(cpo_index,data,mineral_i,grain_i, 1.0 * get_bulk_recrystalization_grain_size_mineral(cpo_index,data,mineral_i));
@@ -1804,8 +1804,8 @@ namespace aspect
             
             set_active_slip_system(cpo_index,data,mineral_i,grain_i,indices[0]);
 
-              Tensor<2,3> schmidt_tensor; // comment- This is not the schmidt tensor. The symmetric part of the slip cross product calculated is the actual schmidt tensor.
-             
+            Tensor<2,3> schmidt_tensor; 
+
              for (unsigned int slip_system_i = 0; slip_system_i < 4; ++slip_system_i)
                {
                  const Tensor<1,3> slip_normal_global = rotation_matrix_transposed*slip_normal_reference[slip_system_i];
@@ -1857,11 +1857,8 @@ namespace aspect
              strain_increment[grain_i] = this->get_timestep() * std::sqrt(std::max(-second_invariant(d), 0.));
             
              set_strain_rate(cpo_index,data,mineral_i,grain_i,std::sqrt(std::max(-second_invariant(d), 0.)));
-             if(get_volume_fractions_grains(cpo_index,data,mineral_i,grain_i) > 0.)
-             {
-               strain_accumulated[grain_i] =  get_strain_accumulated(cpo_index,data,mineral_i,grain_i) + strain_increment[grain_i];             
-             }
-             std::cout<<"strain rate for grain "<<grain_i<<" = "<<std::sqrt(std::max(-second_invariant(d), 0.))<<"\t"<<"strain accumulated so far = "<<get_strain_accumulated(cpo_index,data,mineral_i,grain_i)<<"\tstrain increment = "<<this->get_timestep() * std::sqrt(std::max(-second_invariant(d), 0.))<<std::endl;
+            
+             strain_accumulated[grain_i] =  get_strain_accumulated(cpo_index,data,mineral_i,grain_i) + strain_increment[grain_i];             
              set_strain_accumulated(cpo_index,data,mineral_i,grain_i,strain_accumulated[grain_i]);
 
              // Compute the dislocation density for this grain
@@ -1959,10 +1956,7 @@ namespace aspect
                 {
                   set_surface_energy(cpo_index,data,mineral_i,grain_i,0.0);
                 }
-                
-                sum_volume += (4.0) * numbers::PI * std::pow(grain_size * 0.5 , 2.0);
-                mean_dislocation_density += (4.0) * numbers::PI * std::pow(grain_size * 0.5 , 2.0) *  get_dislocation_density(cpo_index,data,mineral_i,grain_i);
-                
+                              
               }
           }
 
@@ -1980,12 +1974,11 @@ namespace aspect
             {
               const double ratio = strain_energy/surface_energy;
               set_energy_ratio(cpo_index,data,mineral_i,grain_i,ratio);
-              if(ratio >= 1.0)
-              {
+              
                 const double volume = (4./3.) * numbers::PI * std::pow(get_volume_fractions_grains(cpo_index,data,mineral_i,grain_i),3.0);
                 mean_strain_energy += volume * strain_energy; 
                 sum_volume += volume;
-              }
+              
             }
             else
             {
@@ -1994,7 +1987,10 @@ namespace aspect
           }
 
         if (sum_volume !=0. )
-          mean_dislocation_density = mean_dislocation_density/sum_volume;
+        {
+          mean_strain_energy = mean_strain_energy/sum_volume; 
+        }
+          
         
                 
           Assert(isfinite(mean_strain_energy), ExcMessage("mean_strain_energy is not finite: " + std::to_string(mean_strain_energy) + "."));
@@ -2004,14 +2000,10 @@ namespace aspect
             double volume_fraction_grain = get_volume_fractions_grains(cpo_index,data,mineral_i,grain_i);
             if ((volume_fraction_grain != 0.0) && (rx_now[grain_i]) == false)
               {
-                if(get_energy_ratio(cpo_index,data,mineral_i,grain_i) > 1.)
+                if(get_energy_ratio(cpo_index,data,mineral_i,grain_i) >= 1.)
                 {
-                  const double strain_force = 0.5 * shear_modulus * burgers_vector * burgers_vector * (mean_dislocation_density - get_dislocation_density(cpo_index,data,mineral_i,grain_i));
-                  //const double surface_force = 2* interfacial_energy * (std::pow(mean_grain_size,-1.0) - std::pow(volume_fraction_grain,-1.0));
-                  const double driving_force = strain_force ;
-                
                   // Different than D-Rex. Here we actually only compute the derivative and do not multiply it with the volume_fractions. We do that when we advect.
-                  deriv_volume_fractions[grain_i] = get_volume_fraction_mineral(cpo_index,data,mineral_i) *  drexpp_mobility[mineral_i] * driving_force;                
+                  deriv_volume_fractions[grain_i] = get_volume_fraction_mineral(cpo_index,data,mineral_i) *  drexpp_mobility[mineral_i] * (mean_strain_energy - get_strain_energy(cpo_index,data,mineral_i,grain_i));                
                 }
                 else
                 {
