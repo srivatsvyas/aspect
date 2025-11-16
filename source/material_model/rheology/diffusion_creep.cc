@@ -89,10 +89,19 @@ namespace aspect
       DiffusionCreep<dim>::compute_viscosity (const double pressure,
                                               const double temperature,
                                               const unsigned int composition,
+                                              const double grain_size,
                                               const std::vector<double> &phase_function_values,
                                               const std::vector<unsigned int> &n_phase_transitions_per_composition) const
       {
-        return compute_viscosity(pressure, temperature, fixed_grain_size, composition, phase_function_values, n_phase_transitions_per_composition);
+        //std::cout<<"grain size passed to diffusion creep = "<<grain_size<<std::endl;
+        if (grain_size != 0.0)
+          {
+            return compute_viscosity(pressure, temperature, grain_size, composition, phase_function_values, n_phase_transitions_per_composition);
+          }
+        else
+          {
+            return compute_viscosity(pressure, temperature, fixed_grain_size, composition, phase_function_values, n_phase_transitions_per_composition);
+          }
       }
 
 
@@ -120,11 +129,11 @@ namespace aspect
                                      pressure*p.activation_volume)/
                                     (constants::gas_constant*temperature)) *
                            std::pow(grain_size, p.grain_size_exponent);
-
         Assert (viscosity > 0.0,
                 ExcMessage ("Negative diffusion viscosity detected. This is unphysical and should not happen. "
                             "Check for negative parameters. Temperature and pressure are "
-                            + Utilities::to_string(temperature) + " K, " + Utilities::to_string(pressure) + " Pa. "));
+                            + Utilities::to_string(temperature) + " K, " + Utilities::to_string(pressure) + " Pa "
+                            + "and the grain size used is " + Utilities::to_string(grain_size) + " m."));
 
         // Creep viscosities become extremely large at low
         // temperatures and can therefore provoke floating-point overflow errors. In

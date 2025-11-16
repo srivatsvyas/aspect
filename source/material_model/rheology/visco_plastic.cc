@@ -156,6 +156,20 @@ namespace aspect
           edot_ii = std::max(std::sqrt(std::max(-Utilities::Tensors::consistent_second_invariant_of_deviatoric_tensor(Utilities::Tensors::consistent_deviator(in.strain_rate[i])), 0.)),
                              min_strain_rate);
 
+        double grain_size;
+        // get grain size
+        bool has_grain_size_cf = this->introspection().compositional_name_exists("grain_size");
+        if (has_grain_size_cf)
+          {
+            const unsigned int grain_size_index = this->introspection().compositional_index_for_name("grain_size");
+            grain_size = in.composition[i][grain_size_index];
+          }
+        else
+          {
+            grain_size = 0.;
+          }
+
+
         // Calculate viscosities for each of the individual compositional phases
         for (unsigned int j=0; j < volume_fractions.size(); ++j)
           {
@@ -194,6 +208,7 @@ namespace aspect
                 = (viscous_flow_law != dislocation
                    ?
                    diffusion_creep.compute_viscosity(pressure_for_creep, temperature_for_viscosity, j,
+                                                     grain_size,
                                                      phase_function_values,
                                                      n_phase_transitions_per_composition)
                    :
