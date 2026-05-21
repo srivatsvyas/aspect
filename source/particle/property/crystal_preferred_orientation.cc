@@ -1495,6 +1495,8 @@ namespace aspect
             if ((area >= 2. * rx_area)&&(piezometer[grain_i] > 0.))
               {
                 no_recrystalized_grains = (std::floor(recrystalized_fraction[grain_i] * (area/rx_area)));
+                if ((no_recrystalized_grains > n_grains_buffer) && (permutation_vector.size() + empty_buffer_vector.size() < no_recrystalized_grains))
+                  no_recrystalized_grains = n_grains_buffer - 1 ;
               }
             else
               no_recrystalized_grains = 0;
