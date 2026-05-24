@@ -1441,7 +1441,7 @@ namespace aspect
         std::vector<std::size_t> permutation_vector;
         std::vector<std::size_t> empty_buffer_vector;
         std::vector<std::size_t> buffer_vector;
-        int buffer_vector_counter = n_grains_buffer;
+        int buffer_vector_counter = 0.0;
 
         // Creating a vector of indices to track which slots are empty. Newly nucleated grains will be allotted to randomly picked slots
         // permutation_vector  — empty slots (not including the buffer slots) available for new recrystallized grains.
@@ -1495,7 +1495,7 @@ namespace aspect
             if ((area >= 2. * rx_area)&&(piezometer[grain_i] > 0.))
               {
                 no_recrystalized_grains = (std::floor(recrystalized_fraction[grain_i] * (area/rx_area)));
-                if ((no_recrystalized_grains > n_grains_buffer) && (permutation_vector.size() + empty_buffer_vector.size() < no_recrystalized_grains))
+                if (no_recrystalized_grains >= n_grains_buffer) 
                   no_recrystalized_grains = n_grains_buffer - 1 ;
               }
             else
@@ -1577,7 +1577,7 @@ namespace aspect
                         // Path 3: Buffer is saturated — evict the smallest buffer grains, consolidate their area into one slot,
                         // then fill remaining slotswith piezometric-sized recrystallized grains.
                         // The entry is then erased from the corresponding vector array to ensure that there is no overwriting of slots
-                        if (buffer_vector_counter+no_recrystalized_grains >= n_grains_buffer)
+                        if (buffer_vector_counter+no_recrystalized_grains>= n_grains_buffer)
                           {
                             // Sort the array in ascending order of grain size and the corresponding array index.
                             std::sort(buffer_vector.begin(), buffer_vector.end(),
