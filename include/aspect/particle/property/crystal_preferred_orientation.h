@@ -77,7 +77,7 @@ namespace aspect
        */
       enum class AdvectionMethod
       {
-        forward_euler, backward_euler
+        forward_euler, backward_euler, exponential_update
       };
 
       /**
@@ -355,8 +355,8 @@ namespace aspect
                                      const double dislocation_factor,
                                      const double dislocation_stress_exponent,
                                      const SymmetricTensor<2,dim> &deviatoric_strain_rate,
-                                     const double growth_rate,
-                                     const double temperature) const;
+                                     const double temperature,
+                                     const double pressure) const;
 
           /**
            * Declare the parameters this class takes through input files.
@@ -550,7 +550,7 @@ namespace aspect
                                            const unsigned int mineral_i,
                                            const double mean_grain_size) const
           {
-            data[cpo_data_position + 3 + mineral_i *(n_grains * 24 + 5)] = mean_grain_size;
+            data[cpo_data_position + 3 + mineral_i * (n_grains * 24 + 5)] = mean_grain_size;
           }
 
           /**
@@ -565,12 +565,12 @@ namespace aspect
                                                   const ArrayView<double> &data,
                                                   const unsigned int mineral_i) const
           {
-            return data[cpo_data_position + 4 + mineral_i *(n_grains * 24 + 5)];
+            return data[cpo_data_position + 4 + mineral_i * (n_grains * 24 + 5)];
           }
 
           /**
            * @brief Sets the value in the data array representing mean mechanism ratio predicted for the mineral phase.
-           *
+           * 
            * @param cpo_data_position The starting index/position of the cpo data in the particle data vector.
            * @param data The particle data vector.
            * @param mineral_i The mineral to set the value of the mean mechanism ratio of a mineral for.
@@ -1227,6 +1227,27 @@ namespace aspect
                                 const double dt,
                                 const std::pair<std::vector<double>, std::vector<Tensor<2,3>>> &derivatives) const;
 
+          /**
+           * @brief Updates the volume fractions and rotation matrices with a Forward Euler scheme.
+           *
+           * Updates the volume fractions and rotation matrices with a Forward Euler scheme:
+           * $x_t = x_{t-1} + dt * x_{t-1} * \frac{dx_t}{dt}$. The function returns the sum of
+           * the new volume fractions.
+           *
+           * @param cpo_data_position The starting index/position of the cpo data in the particle data vector.
+           * @param data The particle data vector.
+           * @param mineral_i Which mineral to advect for.
+           * @param dt The time step used for the advection step
+           * @param derivatives A pair containing the derivatives for the volume fractions and
+           * orientations respectively.
+           * @return double The sum of all volume fractions.
+           */
+          double
+          advect_exponential_update(const unsigned int cpo_data_position,
+                                    const ArrayView<double> &data,
+                                    const unsigned int mineral_i,
+                                    const double dt,
+                                    const std::pair<std::vector<double>, std::vector<Tensor<2,3>>> &derivatives) const;
 
           /**
            * Computes and returns the volume fraction and grain orientation derivatives such that
@@ -1353,6 +1374,7 @@ namespace aspect
           double n_grains_init;
           double n_grains_buffer;
           double initial_grain_size;
+          double initial_dislocation_density;
 
           /**
           * Parameters required to initialize the grain size and orientations for options other than "Random Orientations"
