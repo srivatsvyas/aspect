@@ -820,15 +820,13 @@ namespace aspect
        
       }
 
+    
      template <int dim>
-double
-CrystalPreferredOrientation<dim>::advect_exponential_update(
-    const unsigned int cpo_index,
-    const ArrayView<double> &data,
-    const unsigned int mineral_i,
-    const double dt,
-    const double temperature,
-    const std::pair<std::vector<double>, std::vector<Tensor<2,3>>> &derivatives) const
+    double CrystalPreferredOrientation<dim>::advect_exponential_update(const unsigned int cpo_index,
+                                                              const ArrayView<double> &data,
+                                                              const unsigned int mineral_i,
+                                                              const double dt,
+                                                              const std::pair<std::vector<double>, std::vector<Tensor<2,3>>> &derivatives) const
 {
   // -----------------------------------------------------------------------
   // Grain-size backward-Euler for  dd/dt = A - kappa/d
@@ -851,10 +849,6 @@ CrystalPreferredOrientation<dim>::advect_exponential_update(
   //     root_small = kappa·dt / root_big
   // -----------------------------------------------------------------------
 
-  // --- Material constants ------------------------------------------------
-  const double M     = (2.0e-11) * std::exp(-1.33e5 / (8.314 * temperature));
-  const double vfm   = get_volume_fraction_mineral(cpo_index, data, mineral_i);
-  const double kappa = 2.0 * M * interfacial_energy * vfm;
 
   // --- Diagnostics -------------------------------------------------------
   unsigned int n_skip        = 0;
@@ -873,7 +867,7 @@ CrystalPreferredOrientation<dim>::advect_exponential_update(
     {
       const double d_n    = get_volume_fractions_grains(cpo_index, data, mineral_i, grain_i);
       const int    status = get_grain_status(cpo_index, data, mineral_i, grain_i);
-
+      const double kappa = get_viscosity_ratio(cpo_index,data,mineral_i,grain_i);
       // ------------------------------------------------------------------
       // Gate: skip dead, buffer, and freshly nucleated grains
       // Freshly nucleated grains (status >= 1) carry their piezometric
@@ -2054,15 +2048,32 @@ CrystalPreferredOrientation<dim>::advect_exponential_update(
                     }
 
                 SymmetricTensor<2,3> d_sym = symmetrize(d_ij);
-                const double eps_slip = std::sqrt(std::max(-second_invariant(d_sym), 0.));
                 strain_increment[grain_i] = timestep * std::sqrt(std::max(-second_invariant(d_sym), 0.));
                 set_strain_rate(cpo_index,data,mineral_i,grain_i,std::sqrt(std::max(-second_invariant(d_sym), 0.)));
                 strain_accumulated[grain_i] =  get_strain_accumulated(cpo_index,data,mineral_i,grain_i) + strain_increment[grain_i];
                 set_strain_accumulated(cpo_index,data,mineral_i,grain_i,strain_accumulated[grain_i]);
             
-                
-                set_dislocation_density(cpo_index,data,mineral_i,grain_i, rho_new);
+                if (get_volume_fractions_grains(cpo_index,data,mineral_i,grain_i) > 0.)
+                  {
+                    const double non_dimensionalization = std::sqrt(std::max(-second_invariant(d_sym), 0.));
+                    const double ref_stress = std::pow(non_dimensionalization/dislocation_factor,1.0/dislocation_stress_exponent);
+                    const double rho_scale = std::pow(ref_stress /(0.5 * shear_modulus * burgers_vector),drexpp_exponent_p[mineral_i]);
 
+                    if (gamma != 0.0)
+                      {
+                        for (unsigned int slip_system_i = 0; slip_system_i < 4; ++slip_system_i)
+                          {
+                            const double rhos = rho_scale * std::pow(tau[indices[slip_system_i]]/second_largest,(drexpp_stress_exponent[mineral_i] - drexpp_exponent_p[mineral_i])) *
+                                                std::pow(std::abs(beta[indices[slip_system_i]] * gamma/non_dimensionalization),drexpp_exponent_p[mineral_i]/drexpp_stress_exponent[mineral_i]);
+                            dislocation_density[grain_i] += rhos;
+                          }
+                      }
+
+                    set_differential_stress(cpo_index,data,mineral_i,grain_i,ref_stress);
+                    strain_energy[grain_i] = shear_modulus * burgers_vector * burgers_vector * dislocation_density[grain_i];
+                    set_dislocation_density(cpo_index,data,mineral_i,grain_i,dislocation_density[grain_i]);
+                  }
+           
               }
           }
 
@@ -2079,49 +2090,12 @@ CrystalPreferredOrientation<dim>::advect_exponential_update(
               }
             }
             
-            // --- Avrami per-grain recrystallization reservoir (fill step, dX/dgamma form) ---
-// dX/dgamma = n*beta*(gamma-gamma_c)^(n-1) * exp(-beta*(gamma-gamma_c)^n)
-// beta = C * exp(g * T/Tm), Breithaupt et al. homologous-temperature fit.
-// Constants n, gamma_c fixed. T and Tm in KELVIN.
-const double avrami_n = 1.48;
-const double gamma_c  = 0.25;
-const double avrami_C = std::exp(-10.0);   // pre-exponential (ln C = -10.0)
-const double avrami_g = 13.8;              // homologous-T sensitivity
-const double T_melt   = 1873.15;           // 1600 C in K, fixed for prelim runs
-
             for(unsigned int grain_i = 0; grain_i < n_grains; ++grain_i)
             {
-                    if ((get_volume_fractions_grains(cpo_index,data,mineral_i,grain_i) > 0.) && (get_strain_accumulated(cpo_index,data,mineral_i,grain_i) >= 0.25))
+              if ((get_volume_fractions_grains(cpo_index,data,mineral_i,grain_i) > 0.) && (get_strain_accumulated(cpo_index,data,mineral_i,grain_i) >= 0.25))
               {
-                if ((get_volume_fractions_grains(cpo_index,data,mineral_i,grain_i) > 0.) &&
-    (get_strain_accumulated(cpo_index,data,mineral_i,grain_i) >= gamma_c))
-  {
-    const double T_grain = temperature;   // K
-    const double beta    = avrami_C * std::exp(avrami_g * (T_grain / T_melt));
-
-    const double gamma_now = get_strain_accumulated(cpo_index,data,mineral_i,grain_i);
-    const double d         = std::max(0.0, gamma_now - gamma_c);
-
-    // strain increment this step, from dislocation-creep slip rate
-    const double dgamma = get_strain_rate(cpo_index,data,mineral_i,grain_i) * timestep;
-
-    // dX/dgamma * dgamma
-    const double dXdg = avrami_n * beta * std::pow(d, avrami_n - 1.0)
-                                * std::exp(-beta * std::pow(d, avrami_n));
-    const double dX   = dXdg * dgamma;
-
-    double X = get_rx_fractions(cpo_index,data,mineral_i,grain_i) + dX;
-    if (X > 1.0) X = 1.0;
-    recrystalized_fractions[grain_i] = X;
-    set_rx_fractions(cpo_index,data,mineral_i,grain_i,X);
-  }
-else
-  {
-    recrystalized_fractions[grain_i] = 0.0;
-    set_rx_fractions(cpo_index,data,mineral_i,grain_i,0.0);
-  }
-            }
-          }
+                
+              }
         // Calling the rx module to carry out dynamic recrystallization
         this->recrystalize_grains(cpo_index,
                                   data,
@@ -2186,13 +2160,14 @@ else
                   set_energy_ratio(cpo_index,data,mineral_i,grain_i,Fstrain/Fsurface);
                   set_strain_energy(cpo_index,data,mineral_i,grain_i,Fstrain);
                   set_surface_energy(cpo_index,data,mineral_i,grain_i,Fsurface);
-                  const double d_timestep = (-1.0 * 2.0 * grain_boundary_mobility * interfacial_energy * timestep)/(std::pow(volume_fraction_grain,2.0));
+                  const double d_timestep = (-1.0 * 2.0 * drexpp_mobility[mineral_i] * interfacial_energy);
                   set_viscosity_ratio(cpo_index,data,mineral_i,grain_i,d_timestep);
                   // Different than D-Rex. Here we actually only compute the derivative and do not multiply it with the volume_fractions. We do that when we advect.
-                  deriv_volume_fractions[grain_i] = get_volume_fraction_mineral(cpo_index,data,mineral_i) *  grain_boundary_mobility * (Fstrain + Fsurface);
+                  deriv_volume_fractions[grain_i] = get_volume_fraction_mineral(cpo_index,data,mineral_i) *  drexpp_mobility[mineral_i] * (Fstrain + Fsurface);
               }
             else
               {
+                set_viscosity_ratio(..., 0.0);   // ← add this line
                 set_energy_ratio(cpo_index,data,mineral_i,grain_i,0.0);
                 set_strain_energy(cpo_index,data,mineral_i,grain_i,0.0);
                 set_surface_energy(cpo_index,data,mineral_i,grain_i,0.0);
