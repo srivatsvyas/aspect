@@ -859,8 +859,7 @@ namespace aspect
   unsigned int n_ok          = 0;
 
   const double floor_size = 0.5e-6;   // m
-  const double ceil_size  = 1.0;      // m  — hard physical ceiling
-
+  
   double sum_volume_fractions = 0.0;
 
   for (unsigned int grain_i = 0; grain_i < n_grains; ++grain_i)
@@ -1006,11 +1005,7 @@ namespace aspect
               dead = true;
               ++n_floor;
             }
-          else if (d_new > ceil_size)
-            {
-              ++n_ceiling;
-              d_new = ceil_size;   // cap, do not kill
-            }
+          
         }
 
       // ------------------------------------------------------------------
@@ -2080,22 +2075,35 @@ namespace aspect
         // Calculating rx kinetics
         for (unsigned int grain_i = 0; grain_i < n_grains; ++grain_i)
           {
-            if ((time != 0) && (get_strain_rate(cpo_index,data,mineral_i,grain_i) > 0.))
+            if ((time != 0) && (get_differential_stress(cpo_index,data,mineral_i,grain_i) > 0.))
               {
-                piezometer[grain_i] = get_bulk_recrystalization_grain_size_mineral(cpo_index,data,mineral_i) ;
+                piezometer[grain_i] = get_bulk_recrystalization_grain_size_mineral(cpo_index,data,mineral_i);
               }
             else
               {
                 piezometer[grain_i] = 0.5;
               }
-            }
-            
-            for(unsigned int grain_i = 0; grain_i < n_grains; ++grain_i)
-            {
-              if ((get_volume_fractions_grains(cpo_index,data,mineral_i,grain_i) > 0.) && (get_strain_accumulated(cpo_index,data,mineral_i,grain_i) >= 0.25))
+
+            if ((get_volume_fractions_grains(cpo_index,data,mineral_i,grain_i) > 0.) && (get_strain_accumulated(cpo_index,data,mineral_i,grain_i) >= 0.25))
               {
-                
+                recrystalized_fractions[grain_i] = get_rx_fractions(cpo_index,data,mineral_i,grain_i);
+                if (strain_accumulated[grain_i] - 0.25 < strain_increment[grain_i])
+                  {
+                    recrystalized_fractions[grain_i] += (avrami_slope_input * (get_strain_accumulated(cpo_index,data,mineral_i,grain_i) - 0.25));
+                  }
+                else
+                  recrystalized_fractions[grain_i] += (avrami_slope_input * strain_increment[grain_i]);
+
+                if (recrystalized_fractions[grain_i] > 1.0)
+                  recrystalized_fractions[grain_i] = 1.0;
               }
+            else
+              {
+                recrystalized_fractions[grain_i] = 0.0;
+              }
+            set_rx_fractions(cpo_index,data,mineral_i,grain_i,recrystalized_fractions[grain_i]);
+          }
+
         // Calling the rx module to carry out dynamic recrystallization
         this->recrystalize_grains(cpo_index,
                                   data,
@@ -2167,7 +2175,7 @@ namespace aspect
               }
             else
               {
-                set_viscosity_ratio(..., 0.0);   // ← add this line
+                set_viscosity_ratio(cpo_index,data,mineral_i,grain_i, 0.0);   // ← add this line
                 set_energy_ratio(cpo_index,data,mineral_i,grain_i,0.0);
                 set_strain_energy(cpo_index,data,mineral_i,grain_i,0.0);
                 set_surface_energy(cpo_index,data,mineral_i,grain_i,0.0);
