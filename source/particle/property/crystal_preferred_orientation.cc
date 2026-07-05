@@ -820,221 +820,280 @@ namespace aspect
        
       }
 
-      template <int dim>
-      double
-      CrystalPreferredOrientation<dim>::advect_exponential_update(const unsigned int cpo_index,
-                                                                  const ArrayView<double> &data,
-                                                                  const unsigned int mineral_i,
-                                                                  const double dt,
-                                                                  const std::pair<std::vector<double>, std::vector<Tensor<2,3>>> &derivatives) const
-      {
-        double sum_volume_fractions = 0;
+     template <int dim>
+double
+CrystalPreferredOrientation<dim>::advect_exponential_update(
+    const unsigned int cpo_index,
+    const ArrayView<double> &data,
+    const unsigned int mineral_i,
+    const double dt,
+    const double temperature,
+    const std::pair<std::vector<double>, std::vector<Tensor<2,3>>> &derivatives) const
+{
+  // -----------------------------------------------------------------------
+  // Grain-size backward-Euler for  dd/dt = A - kappa/d
+  //
+  //   A     = M·vfm·(Fstrain + 2γ/d̄)   frozen drive, already in
+  //           derivatives.first[grain_i] + kappa/d_n
+  //           (derivatives.first was built from rho_new and rho_bar
+  //            in compute_derivatives_drexpp — operator split already done)
+  //
+  //   kappa = 2·M·γ·vfm                 pure material constant,
+  //                                      computed directly here
+  //
+  // Backward-Euler quadratic:
+  //   d_new² - B·d_new + kappa·dt = 0,  B = d_n + A·dt
+  //
+  // Physical root selection:
+  //   equilibrium d* = kappa/A  (A > 0 case)
+  //   physical root lies in [min(d_n, d*), max(d_n, d*)]
+  //   use Vieta's formula for small root to avoid cancellation:
+  //     root_small = kappa·dt / root_big
+  // -----------------------------------------------------------------------
 
-// ----------------------------------------------------------------------
-// Grain-size backward Euler for the ODE   dd/dt = A - kappa/d
-//   A     = M*Fstrain + 2*M*gamma/dbar   (frozen drive: stored energy +
-//                                          pull toward the mean)
-//   kappa = 2*M*gamma                    (self-curvature, the implicit term)
-//
-// SUBSTEPPING: at mantle-convection timesteps (dt ~ 1e11 s), the grain-size
-// relaxation timescale tau ~ 1/A can be orders of magnitude SHORTER than dt.
-// A single backward-Euler step is still unconditionally stable, but it jumps
-// essentially all the way to the equilibrium d* = kappa/A in one step,
-// regardless of d_n. This erases per-grain history: two grains with
-// different starting sizes under the same local conditions converge to the
-// IDENTICAL d_new, every step, with no trace of how far either one actually
-// travelled. Since this model is used to track per-grain CPO/grain-size
-// evolution (not just the bulk mean) for use in a mantle convection code,
-// that information loss is not acceptable.
-//
-// Fix: keep A and kappa frozen for the whole outer step (as before -- they
-// come from a single derivatives() evaluation and we are not iterating the
-// surrounding physics), but apply the SAME backward-Euler quadratic N_sub
-// times with dt_sub = dt/N_sub, so the grain actually traces its approach
-// toward d* instead of snapping to it. N_sub is chosen per-grain from the
-// local relaxation time tau ~ 1/A, capped so cost stays bounded.
-// ----------------------------------------------------------------------
+  // --- Material constants ------------------------------------------------
+  const double M     = (2.0e-11) * std::exp(-1.33e5 / (8.314 * temperature));
+  const double vfm   = get_volume_fraction_mineral(cpo_index, data, mineral_i);
+  const double kappa = 2.0 * M * interfacial_energy * vfm;
 
-// Diagnostics for the distinct outcomes (dt-sensitivity characterization).
-unsigned int n_shrink_to_death = 0;  // A <= 0: monotone shrink, no positive d*
-unsigned int n_no_real_root    = 0;  // disc < 0 with A > 0 (should not happen; see note)
-unsigned int n_below_floor     = 0;  // physical root but sub-resolution
+  // --- Diagnostics -------------------------------------------------------
+  unsigned int n_skip        = 0;
+  unsigned int n_shrink_dead = 0;
+  unsigned int n_curv_dead   = 0;
+  unsigned int n_floor       = 0;
+  unsigned int n_ceiling     = 0;
+  unsigned int n_ok          = 0;
 
-const double floor_size = 0.5e-6;
-const unsigned int n_sub_max = 200;  // cost cap
-const double sub_fraction = 0.3;     // dt_sub <~ sub_fraction * tau_local
+  const double floor_size = 0.5e-6;   // m
+  const double ceil_size  = 1.0;      // m  — hard physical ceiling
 
-for (unsigned int grain_i = 0; grain_i < n_grains; ++grain_i)
-  {
-    const double d_n = get_volume_fractions_grains(cpo_index,data,mineral_i,grain_i);
+  double sum_volume_fractions = 0.0;
 
-    // Skip empty / buffer slots. Their derivative slots were zeroed and they
-    // do not participate in grain growth.
-    if (d_n <= 0.0)
-      {
-        set_grain_size_change(cpo_index,data,mineral_i,grain_i,0.0);
-        continue;
-      }
+  for (unsigned int grain_i = 0; grain_i < n_grains; ++grain_i)
+    {
+      const double d_n    = get_volume_fractions_grains(cpo_index, data, mineral_i, grain_i);
+      const int    status = get_grain_status(cpo_index, data, mineral_i, grain_i);
 
-    // --- Reconstruct kappa and A from the stored slots --------------------
-    const double z_stored = get_viscosity_ratio(cpo_index,data,mineral_i,grain_i);
-    const double kappa    = (dt != 0.0) ? (-z_stored * d_n * d_n / dt) : 0.0; // = 2*M*gamma
+      // ------------------------------------------------------------------
+      // Gate: skip dead, buffer, and freshly nucleated grains
+      // Freshly nucleated grains (status >= 1) carry their piezometric
+      // size from recrystalize_grains and are not subject to GBM this step.
+      // ------------------------------------------------------------------
+      if (d_n <= 0.0 || status < 0 || status >= 1)
+        {
+          ++n_skip;
+          set_grain_size_change(cpo_index, data, mineral_i, grain_i, 0.0);
+          sum_volume_fractions += d_n;   // dead grains add 0, rx grains add piezometric d
+          continue;
+        }
 
-    const double R_dn = derivatives.first[grain_i];   // = A - kappa/d_n
-    const double A    = R_dn + kappa / d_n;            // frozen drive
+      // ------------------------------------------------------------------
+      // Reconstruct A from derivatives.first (already uses rho_new, rho_bar)
+      //   derivatives.first[grain_i] = A - kappa/d_n
+      //   => A = derivatives.first[grain_i] + kappa/d_n
+      // ------------------------------------------------------------------
+      const double R_dn = derivatives.first[grain_i];
+      const double A    = R_dn + kappa / d_n;
 
-    // --- Choose substep count from the local relaxation timescale ---------
-    // tau ~ 1/|A| for the A>0 (equilibrating) case. For A<=0 (pure shrink,
-    // no equilibrium) we still substep using |A| as the rate scale, so a
-    // grain heading to death does so gradually across the step rather than
-    // disappearing in one jump -- consistent with "deaths are gradual"
-    // behaviour established earlier.
-    const double rate_scale = std::max(std::abs(A), 1.0e-30); // avoid div by 0
-    const double tau_local  = 1.0 / rate_scale;
-    unsigned int n_sub = 1;
-    if (kappa > 0.0 && dt > 0.0)
-      {
-        const double n_sub_d = std::ceil(dt / (sub_fraction * tau_local));
-        n_sub = static_cast<unsigned int>(
-                  std::min(std::max(1.0, n_sub_d), static_cast<double>(n_sub_max)));
-      }
-    const double dt_sub = dt / static_cast<double>(n_sub);
-    //std::cout<<"for grain "<<grain_i<<": dt_sub = "<<dt_sub<<"  n_sub = "<<n_sub<<"  tau_local = "<<tau_local<<"  A = "<<A<<"  kappa = "<<kappa<<std::endl;
-    double d_cur = d_n;
-    bool   dead  = false;
+      // ------------------------------------------------------------------
+      // Sanity check on A and kappa
+      // ------------------------------------------------------------------
+      if (!std::isfinite(A) || !std::isfinite(kappa))
+        {
+          ++n_skip;
+          set_grain_size_change(cpo_index, data, mineral_i, grain_i, 0.0);
+          sum_volume_fractions += d_n;
+          continue;
+        }
 
-    for (unsigned int sub = 0; sub < n_sub && !dead; ++sub)
-      {
-        double d_new;
+      // ------------------------------------------------------------------
+      // Backward-Euler quadratic coefficients
+      // ------------------------------------------------------------------
+      const double B    = d_n + A * dt;
+      const double disc = B * B - 4.0 * kappa * dt;
 
-        if (kappa <= 0.0)
-          {
-            // No curvature term (derivative slot zeroed, or rx_now == true).
-            // Linear sub-step: d_new = d_cur + dt_sub*A.
-            d_new = d_cur + dt_sub * A;
-            if (d_new <= 0.0)
+      double d_new  = 0.0;
+      bool   dead   = false;
+
+      // ------------------------------------------------------------------
+      // Case 1: kappa = 0  (no curvature, e.g. interfacial_energy = 0)
+      // Linear fallback: d_new = d_n + A·dt
+      // ------------------------------------------------------------------
+      if (kappa <= 0.0)
+        {
+          d_new = d_n + A * dt;
+          if (d_new <= 0.0)
+            {
               dead = true;
-          }
-        else if (A <= 0.0)
-          {
-            // A <= 0: dd/dt = A - kappa/d < 0 for all d > 0. Monotone shrink,
-            // no positive equilibrium.
-            const double B    = d_cur + dt_sub * A;
-            const double disc = B * B - 4.0 * kappa * dt_sub;
-            if (B <= 0.0 || disc < 0.0)
-              {
-                dead = true;
-                ++n_shrink_to_death;
-              }
-            else
-              {
-                const double sq         = std::sqrt(disc);
-                const double root_big   = 0.5 * (B + sq);
-                const double root_small = (kappa * dt_sub) / root_big;
-                d_new = root_small;   // shrink: take the smaller root
-              }
-          }
-        else
-          {
-            // A > 0: stable equilibrium d* = kappa/A. Physical root lies in
-            // [min(d_cur,d*), max(d_cur,d*)].
-            const double d_star = kappa / A;
-            const double B      = d_cur + dt_sub * A;
-            const double disc   = B * B - 4.0 * kappa * dt_sub;
+              ++n_shrink_dead;
+            }
+        }
 
-            if (disc < 0.0)
-              {
-                ++n_no_real_root;
-                d_new = d_star;
-              }
-            else
-              {
-                const double sq         = std::sqrt(disc);
-                const double root_big   = 0.5 * (B + sq);
-                const double root_small = (kappa * dt_sub) / root_big;
+      // ------------------------------------------------------------------
+      // Case 2: A <= 0, kappa > 0
+      // dd/dt = A - kappa/d < 0 for all d > 0: monotone shrink, no equilibrium.
+      // Quadratic may still have real roots — if so take the smaller one
+      // (grain is shrinking). If not, grain dies this step.
+      // ------------------------------------------------------------------
+      else if (A <= 0.0)
+        {
+          if (B <= 0.0 || disc < 0.0)
+            {
+              dead = true;
+              ++n_shrink_dead;
+            }
+          else
+            {
+              const double root_big   = 0.5 * (B + std::sqrt(disc));
+              const double root_small = (kappa * dt) / root_big;
+              d_new = root_small;
+            }
+        }
 
-                const double lo = std::min(d_cur, d_star);
-                const double hi = std::max(d_cur, d_star);
+      // ------------------------------------------------------------------
+      // Case 3: A > 0, kappa > 0
+      // Stable equilibrium at d* = kappa/A.
+      // Physical root lies in [min(d_n, d*), max(d_n, d*)].
+      // Use interval test to select the correct root.
+      // Use Vieta's formula for root_small to avoid cancellation.
+      // ------------------------------------------------------------------
+      else
+        {
+          const double d_star = kappa / A;
 
-                const bool big_in   = (root_big   >= lo) && (root_big   <= hi);
-                const bool small_in = (root_small >= lo) && (root_small <= hi);
+          if (disc < 0.0)
+            {
+              // Should not happen with correct A and kappa, but guard anyway.
+              // Fall back to d* — grain is at or past equilibrium.
+              ++n_curv_dead;
+              d_new = d_star;
+            }
+          else
+            {
+              const double sq         = std::sqrt(disc);
+              const double root_big   = 0.5 * (B + sq);
+              const double root_small = (kappa * dt) / root_big;   // Vieta
 
-                if (small_in && !big_in)
-                  d_new = root_small;
-                else if (big_in && !small_in)
-                  d_new = root_big;
-                else if (small_in && big_in)
-                  d_new = (std::abs(root_small - d_cur) < std::abs(root_big - d_cur))
-                          ? root_small : root_big;
-                else
+              const double lo = std::min(d_n, d_star);
+              const double hi = std::max(d_n, d_star);
+
+              const bool big_in   = (root_big   >= lo - 1.0e-12 * hi) &&
+                                    (root_big   <= hi + 1.0e-12 * hi);
+              const bool small_in = (root_small >= lo - 1.0e-12 * hi) &&
+                                    (root_small <= hi + 1.0e-12 * hi);
+
+              if (big_in && !small_in)
+                d_new = root_big;
+              else if (small_in && !big_in)
+                d_new = root_small;
+              else if (big_in && small_in)
+                {
+                  // Both in interval: take the one closer to d_n
+                  // (smallest step, most conservative)
+                  d_new = (std::abs(root_big - d_n) < std::abs(root_small - d_n))
+                          ? root_big : root_small;
+                }
+              else
+                {
+                  // Neither in interval: floating-point edge case near d*.
+                  // Snap to d*.
                   d_new = d_star;
-              }
-          }
+                }
+            }
+        }
 
-        if (!dead)
-          d_cur = d_new;
-      }
+      // ------------------------------------------------------------------
+      // Floor and ceiling guards
+      // ------------------------------------------------------------------
+      if (!dead)
+        {
+          if (d_new < floor_size)
+            {
+              dead = true;
+              ++n_floor;
+            }
+          else if (d_new > ceil_size)
+            {
+              ++n_ceiling;
+              d_new = ceil_size;   // cap, do not kill
+            }
+        }
 
-    double d_final = dead ? 0.0 : d_cur;
+      // ------------------------------------------------------------------
+      // Commit
+      // ------------------------------------------------------------------
+      if (dead)
+        {
+          d_new = 0.0;
+          set_grain_status(cpo_index, data, mineral_i, grain_i, -1);
+        }
+      else
+        ++n_ok;
 
-    // --- Resolution floor: retire sub-resolution grains -------------------
-    if (!dead && d_final < floor_size)
-      {
-        ++n_below_floor;
-        dead = true;
-        d_final = 0.0;
-      }
+      set_volume_fractions_grains(cpo_index, data, mineral_i, grain_i, d_new);
+      set_grain_size_change(cpo_index, data, mineral_i, grain_i, d_new - d_n);
+      sum_volume_fractions += d_new;
 
-    if (dead)
-      set_grain_status(cpo_index,data,mineral_i,grain_i,-1);
+      // ------------------------------------------------------------------
+      // Orientation: backward-Euler DCM update (separate ODE, not substepped)
+      // ------------------------------------------------------------------
+      Tensor<2,3> cosine_ref = get_rotation_matrix_grains(cpo_index, data, mineral_i, grain_i);
+      Tensor<2,3> cosine_old = cosine_ref;
+      Tensor<2,3> cosine_new = cosine_ref;
 
-    set_volume_fractions_grains(cpo_index,data,mineral_i,grain_i,d_final);
-    set_grain_size_change(cpo_index,data,mineral_i,grain_i, d_final - d_n);
-    sum_volume_fractions += d_final;
+      for (size_t iteration = 0; iteration < property_advection_max_iterations; ++iteration)
+        {
+          cosine_new = cosine_ref + dt * derivatives.second[grain_i] * cosine_new;
+          if ((cosine_new - cosine_old).norm() < property_advection_tolerance)
+            break;
+          cosine_old = cosine_new;
+        }
+      set_rotation_matrix_grains(cpo_index, data, mineral_i, grain_i, cosine_new);
 
-    // --- Orientation: backward-Euler DCM (generator on the LEFT) ----------
-    // Orientation evolution is a separate ODE (rotation rate, not subject to
-    // the same stiffness collapse) and is left at the outer dt, unsubstepped.
-    Tensor<2,3> cosine_ref = get_rotation_matrix_grains(cpo_index,data,mineral_i,grain_i);
-    Tensor<2,3> cosine_old = cosine_ref;
-    Tensor<2,3> cosine_new = cosine_ref;
-    for (size_t iteration = 0; iteration < property_advection_max_iterations; ++iteration)
-      {
-        cosine_new = cosine_ref + dt * derivatives.second[grain_i] * cosine_new;
-        if ((cosine_new - cosine_old).norm() < property_advection_tolerance)
-          break;
-        cosine_old = cosine_new;
-      }
-    set_rotation_matrix_grains(cpo_index,data,mineral_i,grain_i,cosine_new);
-  }
+    } // end grain loop
 
-std::cout << "grain deaths  shrink=" << n_shrink_to_death
-          << "  no_real_root=" << n_no_real_root
-          << "  below_floor=" << n_below_floor << std::endl;
-(void) n_shrink_to_death; (void) n_no_real_root; (void) n_below_floor;
+  // -----------------------------------------------------------------------
+  // Diagnostics
+  // -----------------------------------------------------------------------
+  std::cout << "GS  ok="        << n_ok
+            << "  skip="        << n_skip
+            << "  shrink_dead=" << n_shrink_dead
+            << "  curv_dead="   << n_curv_dead
+            << "  floor="       << n_floor
+            << "  ceiling="     << n_ceiling
+            << std::endl;
 
-// --- Mean grain size (harmonic, over surviving grains) --------------------
-double sum_grain_size = 0.0;
-int    no_active_grains = 0;
-for (unsigned int grain_i = 0; grain_i < n_grains; ++grain_i)
-  {
-    const double d_n = get_volume_fractions_grains(cpo_index,data,mineral_i,grain_i);
-    if (d_n > 0.0)
-      {
-        sum_grain_size += (1.0 / d_n);
-        ++no_active_grains;
-      }
-  }
-if (no_active_grains > 0 && sum_grain_size > 0.0)
-  set_mean_grain_size_mineral(cpo_index,data,mineral_i, (no_active_grains / sum_grain_size));
+  // -----------------------------------------------------------------------
+  // Mean grain size (harmonic mean over surviving active grains)
+  // -----------------------------------------------------------------------
+  double sum_inv_d  = 0.0;
+  int    n_active   = 0;
 
-std::cout << "mean grain size = " << (no_active_grains / sum_grain_size)
-          << "\t no. of grains considered = " << no_active_grains << std::endl;
+  for (unsigned int grain_i = 0; grain_i < n_grains; ++grain_i)
+    {
+      const double d = get_volume_fractions_grains(cpo_index, data, mineral_i, grain_i);
+      if (d > 0.0)
+        {
+          sum_inv_d += 1.0 / d;
+          ++n_active;
+        }
+    }
 
-Assert(sum_volume_fractions != 0,
-       ExcMessage("The sum of all grain volume fractions of a mineral is equal to zero. This should not happen."));
-return sum_volume_fractions;
-      } 
+  const double mean_gs = (n_active > 0 && sum_inv_d > 0.0)
+                         ? static_cast<double>(n_active) / sum_inv_d
+                         : 0.0;
+
+  set_mean_grain_size_mineral(cpo_index, data, mineral_i, mean_gs);
+
+  std::cout << "mean grain size = " << mean_gs
+            << "  active grains = " << n_active
+            << std::endl;
+
+  Assert(sum_volume_fractions >= 0.0,
+         ExcMessage("sum_volume_fractions went negative."));
+
+  return sum_volume_fractions;
+} 
 
 
 
@@ -2001,123 +2060,8 @@ return sum_volume_fractions;
                 strain_accumulated[grain_i] =  get_strain_accumulated(cpo_index,data,mineral_i,grain_i) + strain_increment[grain_i];
                 set_strain_accumulated(cpo_index,data,mineral_i,grain_i,strain_accumulated[grain_i]);
             
-                 const double rho_n = get_dislocation_density(cpo_index,data,mineral_i,grain_i);
-                 const double grain_size = get_volume_fractions_grains(cpo_index,data,mineral_i,grain_i);
-                 const double dt = timestep;
-                 const double activation_volume_dd = 1.5 * std::pow(10.0,-5);
-                 const double activation_energy_dd = 450 * 1e3;
-                 
-                 const double Rpipe = std::pow(10.0,-11.9);
-                 const double Rgb = std::pow(10.0,-3.42);
-                 
-                 const double exponent_term_dd = exp(-1.0*(activation_energy_dd + (activation_volume_dd * pressure))/(8.314 * temperature));
-                 const double m = 2.46;
-                 const double n = 2.0;
-
-                 const double C1 = eps_slip / burgers_vector;
-                 const double C0 = C1 * (n / grain_size);
-                 const double C3 = Rpipe * exponent_term_dd;
-                 const double C4 = Rgb * exponent_term_dd * (1.0/grain_size);
                 
-                 const double rho_floor = 1.0e6;
-                 const double rho_ceiling = 1.0e15;
-                 const double rho_phys_max = 1.0e14;
-                 
-                 auto R_of = [&](double x) {const double xe = std::max(x, rho_floor);
-                                            return C0 + C1 * m * std::sqrt(xe) - C3 * xe*xe*xe - C4 * xe*xe;};
-                 
-                 auto Rp_of = [&](double x) {const double xe = std::max(x, rho_floor);
-                                             return (C1 * m) / (2.0 * std::sqrt(xe)) -  3.0 * C3 * xe*xe - 2.0 * C4 * xe;};
-                 
-                 auto g_of  = [&](double x) { return x - rho_n - dt * R_of(x); };
-                 auto gp_of = [&](double x) { return 1.0 - dt * Rp_of(x); };
-
-                 double rho_new;
-{
-  double lo = rho_floor;
-  double hi = rho_ceiling;
-  double g_lo = g_of(lo);
-  double g_hi = g_of(hi);
-
-  // Root must be bracketed. Storage-dominated low end -> g_lo < 0;
-  // recovery-dominated high end -> g_hi > 0.
-  if (g_lo * g_hi > 0.0)
-    {
-      // Not bracketed: degenerate case. Fall back to the end with
-      // smaller |g| (closest to a root) and flag it.
-      rho_new = (std::abs(g_lo) < std::abs(g_hi)) ? lo : hi;
-      // Optional: std::cout << "WARNING: rho root not bracketed\n";
-    }
-  else
-    {
-      // Orient so that g(lo) < 0 < g(hi)
-      if (g_lo > 0.0) { std::swap(lo, hi); std::swap(g_lo, g_hi); }
-
-      double x      = rho_n;                          // initial guess
-      if (x <= std::min(lo,hi) || x >= std::max(lo,hi))
-        x = 0.5 * (lo + hi);                          // guess must be in bracket
-
-      double dx_old = std::abs(hi - lo);
-      double dx     = dx_old;
-      double g      = g_of(x);
-      double gp     = gp_of(x);
-
-      const int    max_iter = 100;
-      const double tol      = 1.0e-9 * std::max(rho_n, rho_floor); // relative tol
-
-      for (int it = 0; it < max_iter; ++it)
-        {
-          // Decide: Newton step, or bisection?
-          // Use bisection if Newton would jump out of bracket, or if it
-          // isn't reducing the interval fast enough.
-          const bool newton_out_of_range =
-              (((x - hi) * gp - g) * ((x - lo) * gp - g) > 0.0);
-          const bool newton_too_slow =
-              (std::abs(2.0 * g) > std::abs(dx_old * gp));
-
-          if (newton_out_of_range || newton_too_slow)
-            {
-              // --- bisection step (guaranteed progress) ---
-              dx_old = dx;
-              dx     = 0.5 * (hi - lo);
-              x      = lo + dx;
-            }
-          else
-            {
-              // --- Newton step ---
-              dx_old = dx;
-              dx     = g / gp;
-              x      = x - dx;
-            }
-
-          if (std::abs(dx) < tol) break;   // converged
-
-          g  = g_of(x);
-          gp = gp_of(x);
-
-          // maintain the bracket
-          if (g < 0.0) { lo = x; } else { hi = x; }
-        }
-
-      rho_new = x;
-    }
-}
-
-// --- positivity (should be guaranteed by bracket, but assert) ---
-Assert(rho_new >= 0.0,
-       ExcMessage("dislocation density went negative: " + std::to_string(rho_new)));
-
-// --- physical plausibility flag (diagnostic, not a clamp) ---
-if (rho_new > rho_phys_max)
-  {
-    // rho exceeds any physically measured olivine value -> the storage/
-    // recovery balance is producing unphysical densities (e.g. recovery
-    // too weak). This is a PHYSICS warning, not a solver failure.
-    // std::cout << "WARNING: rho = " << rho_new
-    //           << " exceeds physical max; check recovery coefficients\n";
-  }
-
-set_dislocation_density(cpo_index,data,mineral_i,grain_i, rho_new);
+                set_dislocation_density(cpo_index,data,mineral_i,grain_i, rho_new);
 
               }
           }
@@ -2127,10 +2071,7 @@ set_dislocation_density(cpo_index,data,mineral_i,grain_i, rho_new);
           {
             if ((time != 0) && (get_strain_rate(cpo_index,data,mineral_i,grain_i) > 0.))
               {
-                const double differential_stress = 2.46 * shear_modulus * burgers_vector * std::sqrt(get_dislocation_density(cpo_index,data,mineral_i,grain_i));
-                set_differential_stress(cpo_index,data,mineral_i,grain_i,differential_stress);
-                piezometer[grain_i] = 0.015 * std::pow(differential_stress/1e6, -1.33);
-                //std::cout<<"grain_i: " << grain_i << ", differential_stress: " << differential_stress << ", piezometer: " << piezometer[grain_i] << ", dislocation density: " <<get_dislocation_density(cpo_index,data,mineral_i,grain_i)<< std::endl;
+                piezometer[grain_i] = get_bulk_recrystalization_grain_size_mineral(cpo_index,data,mineral_i) ;
               }
             else
               {
