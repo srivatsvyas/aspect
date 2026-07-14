@@ -2055,7 +2055,7 @@ namespace aspect
             if ((grain_size != 0.0) && (rx_now[grain_i]) == false)
               {
                 const double Fstrain = 0.5 * shear_modulus * std::pow(burgers_vector,2.0) * (mean_dislocation_density - dislocation_density[grain_i]);
-                const double Fsurface = interfacial_energy * ((1.0/mean_grain_size) - (1.0/grain_size));
+                const double Fsurface = 2.0 * interfacial_energy * ((1.0/mean_grain_size) - (1.0/grain_size));
                 deriv_volume_fractions[grain_i] =  get_volume_fraction_mineral(cpo_index,data,mineral_i) * drexpp_mobility[mineral_i] * (Fstrain + Fsurface);
                 set_strain_energy(cpo_index,data,mineral_i,grain_i,Fstrain);
                 set_surface_energy(cpo_index,data,mineral_i,grain_i,Fsurface);
