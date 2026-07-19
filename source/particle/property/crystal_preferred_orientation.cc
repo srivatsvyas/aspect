@@ -150,14 +150,24 @@ namespace aspect
         // The rotation matrix is a direction cosine matrix, representing the orientation of the grain in the domain.
         // The fabric is determined later in the computations, so initialize it to -1.
 
+        // mineral level properties
         std::vector<double> deformation_type(n_minerals, -1.0);
         std::vector<double> bulk_recrystalized_grain_size(n_minerals, 0.0);
-        std::vector<double> mean_grain_size(n_minerals);
-        std::vector<double> mean_mechanism_ratio(n_minerals);
+        std::vector<double> mean_grain_size(n_minerals,0.0);
+        std::vector<int> n_shrink_dead(n_minerals,0);
+        std::vector<int> n_curv_dead(n_minerals,0);
+        std::vector<int> n_floor(n_minerals,0);
+        std::vector<int> n_ceiling(n_minerals,0);
+        std::vector<int> n_rx_slip(n_minerals,0);
+        std::vector<int> n_alive(n_minerals,0);
+        std::vector<double> kappa(n_minerals,0);
+        std::vector<double> vorticity(n_minerals,0);
+        std::vector<double> sauter_mean(n_minerals,0.0);
+        std::vector<double> mean_dislocation_density(n_minerals,0.0);
+
         std::vector<std::vector<double >>volume_fractions_grains(n_minerals);
         std::vector<std::vector<Tensor<2,3>>> rotation_matrices_grains(n_minerals);
         std::vector<std::vector<int    >>grain_status(n_minerals);
-        std::vector<std::vector<double >>viscosity_ratio(n_minerals);
         std::vector<std::vector<double >>strain_rate_ratio(n_minerals);
         std::vector<std::vector<double >>rx_fractions(n_minerals);
         std::vector<std::vector<int    >>active_slip_system(n_minerals);
@@ -165,11 +175,16 @@ namespace aspect
         std::vector<std::vector<double >>differential_stress(n_minerals);
         std::vector<std::vector<double >>strain_energy(n_minerals);
         std::vector<std::vector<double >>surface_energy(n_minerals);
-        std::vector<std::vector<double >>grain_boundary_velocity(n_minerals);
         std::vector<std::vector<double >>grain_size_change(n_minerals);
         std::vector<std::vector<double >>dislocation_density(n_minerals);
         std::vector<std::vector<double >>strain_accumulated(n_minerals);
-        std::vector<std::vector<double >>energy_ratio(n_minerals);
+        std::vector<std::vector<Tensor<1,3>>>rotation_axis(n_minerals);
+        std::vector<std::vector<double >>stiffness_ratio(n_minerals);
+        std::vector<std::vector<double >>A_drive(n_minerals);
+        std::vector<std::vector<double >>theta(n_minerals);
+        std::vector<std::vector<double >>theta_dot(n_minerals);
+        std::vector<std::vector<double >>psi(n_minerals);
+        std::vector<std::vector<double >>post_rx_grainsize(n_minerals);
 
         for (unsigned int mineral_i = 0; mineral_i < n_minerals; ++mineral_i)
           {
@@ -177,7 +192,6 @@ namespace aspect
             rotation_matrices_grains[mineral_i].resize(n_grains);
             grain_status[mineral_i].resize(n_grains);
             strain_rate_ratio[mineral_i].resize(n_grains);
-            viscosity_ratio[mineral_i].resize(n_grains);
             rx_fractions[mineral_i].resize(n_grains);
             active_slip_system[mineral_i].resize(n_grains);
             strain_rate_grains[mineral_i].resize(n_grains);
@@ -188,8 +202,13 @@ namespace aspect
             grain_size_change[mineral_i].resize(n_grains);
             dislocation_density[mineral_i].resize(n_grains);
             strain_accumulated[mineral_i].resize(n_grains);
-            energy_ratio[mineral_i].resize(n_grains);
-
+            rotation_axis[mineral_i].resize(n_grains);
+            stiffness_ratio[mineral_i].resize(n_grains);
+            A_drive[mineral_i].resize(n_grains);
+            theta[mineral_i].resize(n_grains);
+            theta_dot[mineral_i].resize(n_grains);
+            psi[mineral_i].resize(n_grains);
+            post_rx_grainsize[mineral_i].resize(n_grains);
 
             // This will be set by the initial grain subsection.
             if (initial_grains_model == CPOInitialGrainsModel::world_builder)
@@ -356,7 +375,6 @@ namespace aspect
                                 assert(false && "File parsing error");
                               }
                             orientation.push_back({{phi1, phi2, phi3}});
-
                           }
                         file.close();
                       }
@@ -828,52 +846,17 @@ namespace aspect
                                                               const double dt,
                                                               const std::pair<std::vector<double>, std::vector<Tensor<2,3>>> &derivatives) const
 {
-  // -----------------------------------------------------------------------
-  // Grain-size solver for  dd/dt = A - kappa/d
-  //
-  //   A     = M·(Fstrain + 2γ/d̄)   total frozen drive
-  //           = derivatives.first[grain_i] + kappa/d_n
-  //           (derivatives.first built from rho_new, rho_bar in
-  //            compute_derivatives_drexpp — operator split already done)
-  //
-  //   kappa = 2·M·γ·vfm             pure material constant
-  //           stored as -2·M·γ in viscosity_ratio slot by
-  //           compute_derivatives_drexpp (negative by convention)
-  //           zeroed for freshly nucleated grains (rx_now == true)
-  //
-  // Freshly nucleated grains are identified by:
-  //   kappa == 0  AND  R_dn == 0
-  // Both slots are zeroed in compute_derivatives_drexpp when rx_now[grain_i]
-  // is true. Status >= 1 is NOT used here because status is only reset to 0
-  // at the start of the next compute_derivatives_drexpp call, so it correctly
-  // identifies only grains nucleated in the current step.
-  //
-  // Solver choice based on stiffness ratio J = lambda·dt = kappa·dt/d_n²:
-  //
-  //   J < 1  →  ETD1 (exponential time differencing, first order)
-  //             Exact for linearized problem, resolves transient approach.
-  //             d_new = d_n·exp(-λdt) + R_dn·φ
-  //             φ = (1 - exp(-λdt))/λ  (Taylor series when J < 1e-6)
-  //
-  //   J >= 1 →  Backward-Euler quadratic
-  //             d² - B·d + kappa·dt = 0,  B = d_n + A·dt
-  //             Interval-based root selection, Vieta's formula for small root.
-  //
-  // Both methods agree to O(dt²) at J = 1 — switch is smooth.
-  // -----------------------------------------------------------------------
+  const double floor_size = 0.5e-6;
+  const double ceil_size  = 1.0;
 
-  // --- Diagnostics -------------------------------------------------------
-  unsigned int n_dead_skip   = 0;   // status < 0 or d_n <= 0
-  unsigned int n_rx_skip     = 0;   // freshly nucleated this step
-  unsigned int n_etd1        = 0;   // ETD1 branch
-  unsigned int n_be          = 0;   // BE quadratic branch
-  unsigned int n_shrink_dead = 0;   // A <= 0, no positive root
-  unsigned int n_curv_dead   = 0;   // disc < 0, below extinction radius
-  unsigned int n_floor       = 0;   // sub-resolution root
-  unsigned int n_ceiling     = 0;   // capped at physical ceiling
-
-  const double floor_size = 0.5e-6;   // m
-  const double ceil_size  = 1.0;      // m
+  unsigned int n_dead_skip   = 0;
+  unsigned int n_rx_skip     = 0;
+  unsigned int n_etd1        = 0;
+  unsigned int n_be          = 0;
+  unsigned int n_shrink_dead = 0;
+  unsigned int n_curv_dead   = 0;
+  unsigned int n_floor       = 0;
+  unsigned int n_ceiling     = 0;
 
   double sum_volume_fractions = 0.0;
 
@@ -882,37 +865,18 @@ namespace aspect
       const double d_n    = get_volume_fractions_grains(cpo_index, data, mineral_i, grain_i);
       const int    status = get_grain_status(cpo_index, data, mineral_i, grain_i);
 
-      // ------------------------------------------------------------------
-      // Gate 1: dead or buffer slots
-      // ------------------------------------------------------------------
       if (d_n <= 0.0 || status < 0)
         {
           ++n_dead_skip;
-          set_grain_size_change(cpo_index, data, mineral_i, grain_i, 0.0);   // adds 0 for dead, correct
+          set_grain_size_change(cpo_index, data, mineral_i, grain_i, 0.0);
+          sum_volume_fractions += d_n;
           continue;
         }
 
-      // ------------------------------------------------------------------
-      // Read kappa and R_dn from slots written by compute_derivatives_drexpp
-      //
-      //   viscosity_ratio stores -2·M·γ  (negative, pure material rate)
-      //   kappa = -viscosity_ratio >= 0
-      //
-      //   derivatives.first[grain_i] = R_dn = A - kappa/d_n
-      //   (already built from rho_new and rho_bar — operator split done)
-      // ------------------------------------------------------------------
       const double kappa_stored = get_viscosity_ratio(cpo_index, data, mineral_i, grain_i);
       const double kappa        = std::max(0.0, -kappa_stored);
       const double R_dn         = derivatives.first[grain_i];
 
-      // ------------------------------------------------------------------
-      // Gate 2: freshly nucleated grains
-      // compute_derivatives_drexpp zeros both kappa and R_dn for rx_now grains.
-      // These grains carry their piezometric size and do not participate
-      // in GBM this step. Both must be zero to avoid false positives
-      // (a grain at exactly the mean size with zero Fstrain would have
-      //  R_dn = 0 but kappa > 0 — that grain should still be evolved).
-      // ------------------------------------------------------------------
       if (kappa == 0.0 && R_dn == 0.0)
         {
           ++n_rx_skip;
@@ -921,15 +885,8 @@ namespace aspect
           continue;
         }
 
-      // ------------------------------------------------------------------
-      // Reconstruct A
-      //   A = R_dn + kappa/d_n
-      // ------------------------------------------------------------------
       const double A = R_dn + kappa / d_n;
 
-      // ------------------------------------------------------------------
-      // Sanity check
-      // ------------------------------------------------------------------
       if (!std::isfinite(A) || !std::isfinite(kappa) || !std::isfinite(d_n))
         {
           ++n_dead_skip;
@@ -941,10 +898,6 @@ namespace aspect
       double d_new = 0.0;
       bool   dead  = false;
 
-      // ------------------------------------------------------------------
-      // Case 1: kappa = 0
-      // ODE is linear: dd/dt = A. Forward Euler is exact for constant A.
-      // ------------------------------------------------------------------
       if (kappa <= 0.0)
         {
           d_new = d_n + A * dt;
@@ -956,34 +909,17 @@ namespace aspect
           else
             ++n_etd1;
         }
-
-      // ------------------------------------------------------------------
-      // Case 2: kappa > 0
-      // Compute stiffness eigenvalue and ratio.
-      //   lambda = kappa / d_n²   (linearized curvature stiffness)
-      //   J      = lambda * dt    (stiffness ratio)
-      // ------------------------------------------------------------------
       else
         {
           const double lambda = kappa / (d_n * d_n);
           const double J      = lambda * dt;
 
-          // ----------------------------------------------------------------
-          // ETD1 branch: J < 1, transient regime
-          //
-          //   d_new = d_n·exp(-λdt) + R_dn·φ
-          //   φ     = (1 - exp(-λdt)) / λ
-          //
-          // Taylor series for φ when J < 1e-6 to avoid cancellation:
-          //   φ ≈ dt·(1 - J/2 + J²/6)
-          // ----------------------------------------------------------------
           if (J < 1.0)
             {
               const double exp_term = std::exp(-J);
-
-              const double phi = (J > 1.0e-6)
-                                 ? (1.0 - exp_term) / lambda
-                                 : dt * (1.0 - 0.5*J + J*J/6.0);
+              const double phi      = (J > 1.0e-6)
+                                      ? (1.0 - exp_term) / lambda
+                                      : dt * (1.0 - 0.5*J + J*J/6.0);
 
               d_new = d_n * exp_term + R_dn * phi;
 
@@ -995,19 +931,6 @@ namespace aspect
               else
                 ++n_etd1;
             }
-
-          // ----------------------------------------------------------------
-          // BE quadratic branch: J >= 1, near-equilibrium regime
-          //
-          // d² - B·d + kappa·dt = 0,   B = d_n + A·dt
-          //
-          // A <= 0: monotone shrink, no equilibrium.
-          //         Take smaller root (Vieta's formula).
-          //
-          // A > 0:  stable equilibrium d* = kappa/A.
-          //         Physical root in [min(d_n,d*), max(d_n,d*)].
-          //         Interval test + Vieta's for small root.
-          // ----------------------------------------------------------------
           else
             {
               ++n_be;
@@ -1017,7 +940,6 @@ namespace aspect
 
               if (A <= 0.0)
                 {
-                  // Monotone shrink — take smaller root
                   if (B <= 0.0 || disc < 0.0)
                     {
                       dead = true;
@@ -1031,14 +953,10 @@ namespace aspect
                 }
               else
                 {
-                  // A > 0: equilibrium at d* = kappa/A
                   const double d_star = kappa / A;
 
                   if (disc < 0.0)
                     {
-                      // Grain below extinction radius sqrt(kappa*dt).
-                      // If A is genuinely near zero: no drive, dies from
-                      // curvature. Otherwise snap to d*.
                       ++n_curv_dead;
                       if (A < 1.0e-20)
                         dead = true;
@@ -1078,9 +996,6 @@ namespace aspect
             }
         }
 
-      // ------------------------------------------------------------------
-      // Floor and ceiling guards
-      // ------------------------------------------------------------------
       if (!dead)
         {
           if (d_new < floor_size)
@@ -1095,9 +1010,6 @@ namespace aspect
             }
         }
 
-      // ------------------------------------------------------------------
-      // Commit
-      // ------------------------------------------------------------------
       if (dead)
         {
           d_new = 0.0;
@@ -1108,9 +1020,6 @@ namespace aspect
       set_grain_size_change(cpo_index, data, mineral_i, grain_i, d_new - d_n);
       sum_volume_fractions += d_new;
 
-      // ------------------------------------------------------------------
-      // Orientation: backward-Euler DCM update (separate ODE)
-      // ------------------------------------------------------------------
       Tensor<2,3> cosine_ref = get_rotation_matrix_grains(cpo_index, data, mineral_i, grain_i);
       Tensor<2,3> cosine_old = cosine_ref;
       Tensor<2,3> cosine_new = cosine_ref;
@@ -1123,12 +1032,8 @@ namespace aspect
           cosine_old = cosine_new;
         }
       set_rotation_matrix_grains(cpo_index, data, mineral_i, grain_i, cosine_new);
+    }
 
-    } // end grain loop
-
-  // -----------------------------------------------------------------------
-  // Diagnostics
-  // -----------------------------------------------------------------------
   std::cout << "GS"
             << "  etd1="        << n_etd1
             << "  be="          << n_be
@@ -1140,9 +1045,6 @@ namespace aspect
             << "  ceiling="     << n_ceiling
             << std::endl;
 
-  // -----------------------------------------------------------------------
-  // Mean grain size (harmonic mean over all surviving grains)
-  // -----------------------------------------------------------------------
   double sum_inv_d = 0.0;
   int    n_active  = 0;
 
