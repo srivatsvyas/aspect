@@ -324,18 +324,23 @@ namespace aspect
                           }
 
                         strain_rate_ratio[mineral_i][grain_i] = 0.;
-                        viscosity_ratio[mineral_i][grain_i] = 0.;
                         rx_fractions[mineral_i][grain_i] = 0.;
-                        active_slip_system[mineral_i][grain_i] = 0;
+                        active_slip_system[mineral_i][grain_i] = 0.;
                         strain_rate_grains[mineral_i][grain_i] = 0.;
                         differential_stress[mineral_i][grain_i] = 0.;
                         strain_energy[mineral_i][grain_i] = 0.;
-                        surface_energy[mineral_i][grain_i] =0.;
+                        surface_energy[mineral_i][grain_i] = 0.;
                         grain_boundary_velocity[mineral_i][grain_i] = 0.;
-                        grain_size_change[mineral_i][grain_i]= 0.;
-                        dislocation_density[mineral_i][grain_i] = initial_dislocation_density;
-                        strain_accumulated[mineral_i][grain_i] =0.;
-                        energy_ratio[mineral_i][grain_i] =0.;
+                        grain_size_change[mineral_i][grain_i] = 0.;
+                        dislocation_density[mineral_i][grain_i] = 0.;
+                        strain_accumulated[mineral_i][grain_i] = 0.;
+                        rotation_axis[mineral_i][grain_i] = 0.;
+                        stiffness_ratio[mineral_i][grain_i] = 0.;
+                        A_drive[mineral_i][grain_i] = 0.;
+                        theta[mineral_i][grain_i] = 0.;
+                        theta_dot[mineral_i][grain_i] = 0.;
+                        psi[mineral_i][grain_i] = 0.;
+                        post_rx_grainsize[mineral_i][grain_i] = 0.;
                       }
 
                     int grains  = 0;
@@ -397,23 +402,26 @@ namespace aspect
                           {
                             this->compute_random_rotation_matrix(rotation_matrices_grains[mineral_i][grain_i]);
                           }
-                        grain_status[mineral_i][grain_i] = 0;
                         strain_rate_ratio[mineral_i][grain_i] = 0.;
-                        viscosity_ratio[mineral_i][grain_i] = 0.;
                         rx_fractions[mineral_i][grain_i] = 0.;
-                        active_slip_system[mineral_i][grain_i] = 0;
+                        active_slip_system[mineral_i][grain_i] = 0.;
                         strain_rate_grains[mineral_i][grain_i] = 0.;
                         differential_stress[mineral_i][grain_i] = 0.;
                         strain_energy[mineral_i][grain_i] = 0.;
-                        surface_energy[mineral_i][grain_i] =0.;
+                        surface_energy[mineral_i][grain_i] = 0.;
                         grain_boundary_velocity[mineral_i][grain_i] = 0.;
-                        grain_size_change[mineral_i][grain_i]= 0.;
-                        dislocation_density[mineral_i][grain_i] = initial_dislocation_density;
-                        strain_accumulated[mineral_i][grain_i] =0.;
-                        energy_ratio[mineral_i][grain_i] =0.;
+                        grain_size_change[mineral_i][grain_i] = 0.;
+                        dislocation_density[mineral_i][grain_i] = 0.;
+                        strain_accumulated[mineral_i][grain_i] = 0.;
+                        rotation_axis[mineral_i][grain_i] = 0.;
+                        stiffness_ratio[mineral_i][grain_i] = 0.;
+                        A_drive[mineral_i][grain_i] = 0.;
+                        theta[mineral_i][grain_i] = 0.;
+                        theta_dot[mineral_i][grain_i] = 0.;
+                        psi[mineral_i][grain_i] = 0.;
+                        post_rx_grainsize[mineral_i][grain_i] = 0.;
                       }
                   }
-
               }
           }
 
@@ -424,6 +432,16 @@ namespace aspect
             data.emplace_back(bulk_recrystalized_grain_size[mineral_i]);
             data.emplace_back(mean_grain_size[mineral_i]);
             data.emplace_back(mean_mechanism_ratio[mineral_i]);
+            data.emplace_back(n_shrink_dead[mineral_i]);
+            data.emplace_back(n_curv_dead[mineral_i]);
+            data.emplace_back(n_floor[mineral_i]);
+            data.emplace_back(n_ceiling[mineral_i]);
+            data.emplace_back(n_rx_slip[mineral_i]);
+            data.emplace_back(n_alive[mineral_i]);
+            data.emplace_back(kappa[mineral_i]);
+            data.emplace_back(vorticity[mineral_i]);
+            data.emplace_back(sauter_mean[mineral_i]);
+            data.emplace_back(mean_dislocation_density[mineral_i]);
             for (unsigned int grain_i = 0; grain_i < n_grains ; ++grain_i)
               {
                 data.emplace_back(volume_fractions_grains[mineral_i][grain_i]);
@@ -434,18 +452,21 @@ namespace aspect
                   }
                 data.emplace_back(grain_status[mineral_i][grain_i]);
                 data.emplace_back(strain_rate_ratio[mineral_i][grain_i]);
-                data.emplace_back(viscosity_ratio[mineral_i][grain_i]);
                 data.emplace_back(rx_fractions[mineral_i][grain_i]);
                 data.emplace_back(active_slip_system[mineral_i][grain_i]);
-                data.emplace_back(strain_rate_grains[mineral_i][grain_i]);
-                data.emplace_back(differential_stress[mineral_i][grain_i]);
+                data.emplace_back(strain_rate[mineral_i][grain_i]);
                 data.emplace_back(strain_energy[mineral_i][grain_i]);
                 data.emplace_back(surface_energy[mineral_i][grain_i]);
-                data.emplace_back(grain_boundary_velocity[mineral_i][grain_i]);
+                data.emplace_back(differential_stress[mineral_i][grain_i]);
                 data.emplace_back(grain_size_change[mineral_i][grain_i]);
                 data.emplace_back(dislocation_density[mineral_i][grain_i]);
                 data.emplace_back(strain_accumulated[mineral_i][grain_i]);
-                data.emplace_back(energy_ratio[mineral_i][grain_i]);
+                data.emplace_back(stiffness_ratio[mineral_i][grain_i]);
+                data.emplace_back(A_drive[mineral_i][grain_i]);
+                data.emplace_back(theta[mineral_i][grain_i]);
+                data.emplace_back(theta_dot[mineral_i][grain_i]);
+                data.emplace_back(psi[mineral_i][grain_i]);
+                data.emplace_back(post_rx_grainsize[mineral_i][grain_i]);
               }
 
           }
@@ -706,7 +727,6 @@ namespace aspect
       {
         std::vector<std::pair<std::string,unsigned int>> property_information;
         property_information.reserve(n_minerals * n_grains * (1+Tensor<2,3>::n_independent_components));
-
         for (unsigned int mineral_i = 0; mineral_i < n_minerals; ++mineral_i)
           {
             property_information.emplace_back("cpo mineral " + std::to_string(mineral_i) + " type",1);
@@ -714,7 +734,16 @@ namespace aspect
             property_information.emplace_back("cpo mineral " + std::to_string(mineral_i) + " bulk recrystalized grain size",1);
             property_information.emplace_back("cpo mineral " + std::to_string(mineral_i) + " mean_grain_size",1);
             property_information.emplace_back("cpo mineral " + std::to_string(mineral_i) + " mean_mechanism_ratio",1);
-
+            property_information.emplace_back("cpo mineral " + std::to_string(mineral_i) + " no. of shrink dead",1);
+            property_information.emplace_back("cpo mineral " + std::to_string(mineral_i) + " no. of curvature dead",1);
+            property_information.emplace_back("cpo mineral " + std::to_string(mineral_i) + " no. of floor",1);
+            property_information.emplace_back("cpo mineral " + std::to_string(mineral_i) + " no. of recrystallization",1);
+            property_information.emplace_back("cpo mineral " + std::to_string(mineral_i) + " no. of active grain",1);
+            property_information.emplace_back("cpo mineral " + std::to_string(mineral_i) + " kappa",1);
+            property_information.emplace_back("cpo mineral " + std::to_string(mineral_i) + " vorticity",1);
+            property_information.emplace_back("cpo mineral " + std::to_string(mineral_i) + " sauter_mean",1);
+            property_information.emplace_back("cpo mineral " + std::to_string(mineral_i) + " mean_dislocation_density",1);
+            
             for (unsigned int grain_i = 0; grain_i < n_grains; ++grain_i)
               {
                 property_information.emplace_back("cpo mineral " + std::to_string(mineral_i) + " grain " + std::to_string(grain_i) + " volume fraction",1);
@@ -726,18 +755,26 @@ namespace aspect
 
                 property_information.emplace_back("cpo mineral " + std::to_string(mineral_i) + " grain " + std::to_string(grain_i) + " grain status",1);
                 property_information.emplace_back("cpo mineral " + std::to_string(mineral_i) + " grain " + std::to_string(grain_i) + " strain rate ratio",1);
-                property_information.emplace_back("cpo mineral " + std::to_string(mineral_i) + " grain " + std::to_string(grain_i) + " viscosity ratio",1);
                 property_information.emplace_back("cpo mineral " + std::to_string(mineral_i) + " grain " + std::to_string(grain_i) + " recrystalized fractions",1);
                 property_information.emplace_back("cpo mineral " + std::to_string(mineral_i) + " grain " + std::to_string(grain_i) + " active slip system",1);
                 property_information.emplace_back("cpo mineral " + std::to_string(mineral_i) + " grain " + std::to_string(grain_i) + " strain rate",1);
-                property_information.emplace_back("cpo mineral " + std::to_string(mineral_i) + " grain " + std::to_string(grain_i) + " differential stress",1);
                 property_information.emplace_back("cpo mineral " + std::to_string(mineral_i) + " grain " + std::to_string(grain_i) + " strain energy",1);
                 property_information.emplace_back("cpo mineral " + std::to_string(mineral_i) + " grain " + std::to_string(grain_i) + " surface energy",1);
-                property_information.emplace_back("cpo mineral " + std::to_string(mineral_i) + " grain " + std::to_string(grain_i) + " grain boundary velocity",1);
+                property_information.emplace_back("cpo mineral " + std::to_string(mineral_i) + " grain " + std::to_string(grain_i) + " differential stress",1);
                 property_information.emplace_back("cpo mineral " + std::to_string(mineral_i) + " grain " + std::to_string(grain_i) + " grain size change",1);
                 property_information.emplace_back("cpo mineral " + std::to_string(mineral_i) + " grain " + std::to_string(grain_i) + " dislocation density",1);
                 property_information.emplace_back("cpo mineral " + std::to_string(mineral_i) + " grain " + std::to_string(grain_i) + " strain accumulated",1);
-                property_information.emplace_back("cpo mineral " + std::to_string(mineral_i) + " grain " + std::to_string(grain_i) + " energy_ratio",1);
+                property_information.emplace_back("cpo mineral " + std::to_string(mineral_i) + " grain " + std::to_string(grain_i) + " stiffness ratio",1);
+                property_information.emplace_back("cpo mineral " + std::to_string(mineral_i) + " grain " + std::to_string(grain_i) + " timescale",1);
+                property_information.emplace_back("cpo mineral " + std::to_string(mineral_i) + " grain " + std::to_string(grain_i) + " A_drive",1);
+                property_information.emplace_back("cpo mineral " + std::to_string(mineral_i) + " grain " + std::to_string(grain_i) + " misorientation angle",1);
+                for (unsigned int index = 0; index < Tensor<1,3>::n_independent_components; ++index)
+                  {
+                    property_information.emplace_back("cpo mineral " + std::to_string(mineral_i) + " grain " + std::to_string(grain_i) + " rotation_axis " + std::to_string(index),1);
+                  }
+                property_information.emplace_back("cpo mineral " + std::to_string(mineral_i) + " grain " + std::to_string(grain_i) + " rotation rate",1);
+                property_information.emplace_back("cpo mineral " + std::to_string(mineral_i) + " grain " + std::to_string(grain_i) + " psi",1);
+                property_information.emplace_back("cpo mineral " + std::to_string(mineral_i) + " grain " + std::to_string(grain_i) + " post rx grainsize",1);
               }
           }
 
@@ -839,240 +876,240 @@ namespace aspect
       }
 
     
-     template <int dim>
-    double CrystalPreferredOrientation<dim>::advect_exponential_update(const unsigned int cpo_index,
-                                                              const ArrayView<double> &data,
-                                                              const unsigned int mineral_i,
-                                                              const double dt,
-                                                              const std::pair<std::vector<double>, std::vector<Tensor<2,3>>> &derivatives) const
-{
-  const double floor_size = 0.5e-6;
-  const double ceil_size  = 1.0;
+      template <int dim>
+      double CrystalPreferredOrientation<dim>::advect_exponential_update(const unsigned int cpo_index,
+                                                                         const ArrayView<double> &data,
+                                                                         const unsigned int mineral_i,
+                                                                         const double dt,
+                                                                         const std::pair<std::vector<double>, std::vector<Tensor<2,3>>> &derivatives) const
+      {
+        const double floor_size = 0.5e-6;
+        const double ceil_size  = 1.0;
 
-  unsigned int n_dead_skip   = 0;
-  unsigned int n_rx_skip     = 0;
-  unsigned int n_etd1        = 0;
-  unsigned int n_be          = 0;
-  unsigned int n_shrink_dead = 0;
-  unsigned int n_curv_dead   = 0;
-  unsigned int n_floor       = 0;
-  unsigned int n_ceiling     = 0;
+        unsigned int n_dead_skip   = 0;
+        unsigned int n_rx_skip     = 0;
+        unsigned int n_etd1        = 0;
+        unsigned int n_be          = 0;
+        unsigned int n_shrink_dead = 0;
+        unsigned int n_curv_dead   = 0;
+        unsigned int n_floor       = 0;
+        unsigned int n_ceiling     = 0;
 
-  double sum_volume_fractions = 0.0;
+        double sum_volume_fractions = 0.0;
 
-  for (unsigned int grain_i = 0; grain_i < n_grains; ++grain_i)
-    {
-      const double d_n    = get_volume_fractions_grains(cpo_index, data, mineral_i, grain_i);
-      const int    status = get_grain_status(cpo_index, data, mineral_i, grain_i);
+        for (unsigned int grain_i = 0; grain_i < n_grains; ++grain_i)
+          {
+            const double d_n    = get_volume_fractions_grains(cpo_index, data, mineral_i, grain_i);
+            const int    status = get_grain_status(cpo_index, data, mineral_i, grain_i);
 
-      if (d_n <= 0.0 || status < 0)
-        {
-          ++n_dead_skip;
-          set_grain_size_change(cpo_index, data, mineral_i, grain_i, 0.0);
-          sum_volume_fractions += d_n;
-          continue;
-        }
+            if (d_n <= 0.0 || status < 0)
+              {
+                ++n_dead_skip;
+                set_grain_size_change(cpo_index, data, mineral_i, grain_i, 0.0);
+                sum_volume_fractions += d_n;
+                continue;
+              }
 
-      const double kappa_stored = get_viscosity_ratio(cpo_index, data, mineral_i, grain_i);
-      const double kappa        = std::max(0.0, -kappa_stored);
-      const double R_dn         = derivatives.first[grain_i];
+        const double kappa_stored = get_viscosity_ratio(cpo_index, data, mineral_i, grain_i);
+        const double kappa        = std::max(0.0, -kappa_stored);
+        const double R_dn         = derivatives.first[grain_i];
 
-      if (kappa == 0.0 && R_dn == 0.0)
-        {
-          ++n_rx_skip;
-          set_grain_size_change(cpo_index, data, mineral_i, grain_i, 0.0);
-          sum_volume_fractions += d_n;
-          continue;
-        }
+        if (kappa == 0.0 && R_dn == 0.0)
+          {
+            ++n_rx_skip;
+            set_grain_size_change(cpo_index, data, mineral_i, grain_i, 0.0);
+            sum_volume_fractions += d_n;
+            continue;
+          }
 
-      const double A = R_dn + kappa / d_n;
+        const double A = R_dn + kappa / d_n;
 
-      if (!std::isfinite(A) || !std::isfinite(kappa) || !std::isfinite(d_n))
-        {
-          ++n_dead_skip;
-          set_grain_size_change(cpo_index, data, mineral_i, grain_i, 0.0);
-          sum_volume_fractions += d_n;
-          continue;
-        }
+        if (!std::isfinite(A) || !std::isfinite(kappa) || !std::isfinite(d_n))
+          {
+            ++n_dead_skip;
+            set_grain_size_change(cpo_index, data, mineral_i, grain_i, 0.0);
+            sum_volume_fractions += d_n;
+            continue;
+          }
 
-      double d_new = 0.0;
-      bool   dead  = false;
+        double d_new = 0.0;
+        bool   dead  = false;
 
-      if (kappa <= 0.0)
-        {
-          d_new = d_n + A * dt;
-          if (d_new <= 0.0)
-            {
-              dead = true;
-              ++n_shrink_dead;
-            }
-          else
-            ++n_etd1;
-        }
-      else
-        {
-          const double lambda = kappa / (d_n * d_n);
-          const double J      = lambda * dt;
-
-          if (J < 1.0)
-            {
-              const double exp_term = std::exp(-J);
-              const double phi      = (J > 1.0e-6)
-                                      ? (1.0 - exp_term) / lambda
-                                      : dt * (1.0 - 0.5*J + J*J/6.0);
-
-              d_new = d_n * exp_term + R_dn * phi;
-
-              if (d_new <= 0.0)
-                {
-                  dead = true;
-                  ++n_shrink_dead;
-                }
-              else
+        if (kappa <= 0.0)
+          {
+            d_new = d_n + A * dt;
+            if (d_new <= 0.0)
+              {
+                dead = true;
+                ++n_shrink_dead;
+              }
+            else
                 ++n_etd1;
-            }
-          else
-            {
-              ++n_be;
+          }
+        else
+          {
+            const double lambda = kappa / (d_n * d_n);
+            const double J      = lambda * dt;
 
-              const double B    = d_n + A * dt;
-              const double disc = B * B - 4.0 * kappa * dt;
+            if (J < 1.0)
+              {
+                const double exp_term = std::exp(-J);
+                const double phi      = (J > 1.0e-6)
+                                        ? (1.0 - exp_term) / lambda
+                                        : dt * (1.0 - 0.5*J + J*J/6.0);
 
-              if (A <= 0.0)
-                {
-                  if (B <= 0.0 || disc < 0.0)
-                    {
-                      dead = true;
-                      ++n_shrink_dead;
-                    }
-                  else
-                    {
-                      const double root_big = 0.5 * (B + std::sqrt(disc));
-                      d_new = (kappa * dt) / root_big;
-                    }
-                }
-              else
-                {
-                  const double d_star = kappa / A;
+                d_new = d_n * exp_term + R_dn * phi;
 
-                  if (disc < 0.0)
-                    {
-                      ++n_curv_dead;
-                      if (A < 1.0e-20)
+                if (d_new <= 0.0)
+                  {
+                    dead = true;
+                    ++n_shrink_dead;
+                  }
+                else
+                  ++n_etd1;
+              }
+            else
+              {
+                ++n_be;
+
+                const double B    = d_n + A * dt;
+                const double disc = B * B - 4.0 * kappa * dt;
+
+                if (A <= 0.0)
+                  {
+                    if (B <= 0.0 || disc < 0.0)
+                      {
                         dead = true;
-                      else
-                        d_new = d_star;
-                    }
-                  else
-                    {
-                      const double sq         = std::sqrt(disc);
-                      const double root_big   = 0.5 * (B + sq);
-                      const double root_small = (kappa * dt) / root_big;
+                        ++n_shrink_dead;
+                      }
+                    else
+                      {
+                        const double root_big = 0.5 * (B + std::sqrt(disc));
+                        d_new = (kappa * dt) / root_big;
+                      }
+                  }
+                else
+                  {
+                    const double d_star = kappa / A;
 
-                      const double lo  = std::min(d_n, d_star);
-                      const double hi  = std::max(d_n, d_star);
-                      const double tol = 1.0e-12 * hi;
+                    if (disc < 0.0)
+                      {
+                        ++n_curv_dead;
+                        if (A < 1.0e-20)
+                          dead = true;
+                        else
+                          d_new = d_star;
+                      }
+                    else
+                      {
+                        const double sq         = std::sqrt(disc);
+                        const double root_big   = 0.5 * (B + sq);
+                        const double root_small = (kappa * dt) / root_big;
 
-                      const bool big_in   = (root_big   >= lo - tol) &&
-                                            (root_big   <= hi + tol);
-                      const bool small_in = (root_small >= lo - tol) &&
-                                            (root_small <= hi + tol);
+                        const double lo  = std::min(d_n, d_star);
+                        const double hi  = std::max(d_n, d_star);
+                        const double tol = 1.0e-12 * hi;
 
-                      if (big_in && !small_in)
-                        d_new = root_big;
-                      else if (small_in && !big_in)
-                        d_new = root_small;
-                      else if (big_in && small_in)
-                        {
-                          if (std::abs(root_big - d_n) < std::abs(root_small - d_n))
-                            d_new = root_big;
-                          else
-                            d_new = root_small;
-                        }
-                      else
-                        d_new = d_star;
+                        const bool big_in   = (root_big   >= lo - tol) &&
+                                              (root_big   <= hi + tol);
+                        const bool small_in = (root_small >= lo - tol) &&
+                                              (root_small <= hi + tol);
+
+                        if (big_in && !small_in)
+                          d_new = root_big;
+                        else if (small_in && !big_in)
+                          d_new = root_small;
+                        else if (big_in && small_in)
+                          {
+                            if (std::abs(root_big - d_n) < std::abs(root_small - d_n))
+                              d_new = root_big;
+                            else
+                              d_new = root_small;
+                          }
+                        else
+                          d_new = d_star;
+                       }
                     }
                 }
             }
-        }
 
-      if (!dead)
+        if (!dead)
+          {
+            if (d_new < floor_size)
+              {
+                dead = true;
+                ++n_floor;
+              }
+            else if (d_new > ceil_size)
+              {
+                ++n_ceiling;
+                d_new = ceil_size;
+              }
+          }
+
+        if (dead)
+          {
+            d_new = 0.0;
+            set_grain_status(cpo_index, data, mineral_i, grain_i, -1);
+          }
+
+        set_volume_fractions_grains(cpo_index, data, mineral_i, grain_i, d_new);
+        set_grain_size_change(cpo_index, data, mineral_i, grain_i, d_new - d_n);
+        sum_volume_fractions += d_new;
+
+        Tensor<2,3> cosine_ref = get_rotation_matrix_grains(cpo_index, data, mineral_i, grain_i);
+        Tensor<2,3> cosine_old = cosine_ref;
+        Tensor<2,3> cosine_new = cosine_ref;
+
+        for (size_t iteration = 0; iteration < property_advection_max_iterations; ++iteration)
+          {
+            cosine_new = cosine_ref + dt * derivatives.second[grain_i] * cosine_new;
+            if ((cosine_new - cosine_old).norm() < property_advection_tolerance)
+              break;
+            cosine_old = cosine_new;
+          }
+        set_rotation_matrix_grains(cpo_index, data, mineral_i, grain_i, cosine_new);
+      }
+
+       std::cout << "GS"
+                 << "  etd1="        << n_etd1
+                 << "  be="          << n_be
+                 << "  dead_skip="   << n_dead_skip
+                 << "  rx_skip="     << n_rx_skip
+                 << "  shrink_dead=" << n_shrink_dead
+                 << "  curv_dead="   << n_curv_dead
+                 << "  floor="       << n_floor
+                 << "  ceiling="     << n_ceiling
+                 << std::endl;
+
+       double sum_inv_d = 0.0;
+       int n_active  = 0;
+
+      for (unsigned int grain_i = 0; grain_i < n_grains; ++grain_i)
         {
-          if (d_new < floor_size)
+          const double d = get_volume_fractions_grains(cpo_index, data, mineral_i, grain_i);
+          if (d > 0.0)
             {
-              dead = true;
-              ++n_floor;
-            }
-          else if (d_new > ceil_size)
-            {
-              ++n_ceiling;
-              d_new = ceil_size;
+              sum_inv_d += 1.0 / d;
+              ++n_active;
             }
         }
 
-      if (dead)
-        {
-          d_new = 0.0;
-          set_grain_status(cpo_index, data, mineral_i, grain_i, -1);
-        }
+        const double mean_gs = (n_active > 0 && sum_inv_d > 0.0)
+                              ? static_cast<double>(n_active) / sum_inv_d
+                              : 0.0;
 
-      set_volume_fractions_grains(cpo_index, data, mineral_i, grain_i, d_new);
-      set_grain_size_change(cpo_index, data, mineral_i, grain_i, d_new - d_n);
-      sum_volume_fractions += d_new;
+        set_mean_grain_size_mineral(cpo_index, data, mineral_i, mean_gs);
 
-      Tensor<2,3> cosine_ref = get_rotation_matrix_grains(cpo_index, data, mineral_i, grain_i);
-      Tensor<2,3> cosine_old = cosine_ref;
-      Tensor<2,3> cosine_new = cosine_ref;
-
-      for (size_t iteration = 0; iteration < property_advection_max_iterations; ++iteration)
-        {
-          cosine_new = cosine_ref + dt * derivatives.second[grain_i] * cosine_new;
-          if ((cosine_new - cosine_old).norm() < property_advection_tolerance)
-            break;
-          cosine_old = cosine_new;
-        }
-      set_rotation_matrix_grains(cpo_index, data, mineral_i, grain_i, cosine_new);
-    }
-
-  std::cout << "GS"
-            << "  etd1="        << n_etd1
-            << "  be="          << n_be
-            << "  dead_skip="   << n_dead_skip
-            << "  rx_skip="     << n_rx_skip
-            << "  shrink_dead=" << n_shrink_dead
-            << "  curv_dead="   << n_curv_dead
-            << "  floor="       << n_floor
-            << "  ceiling="     << n_ceiling
-            << std::endl;
-
-  double sum_inv_d = 0.0;
-  int    n_active  = 0;
-
-  for (unsigned int grain_i = 0; grain_i < n_grains; ++grain_i)
-    {
-      const double d = get_volume_fractions_grains(cpo_index, data, mineral_i, grain_i);
-      if (d > 0.0)
-        {
-          sum_inv_d += 1.0 / d;
-          ++n_active;
-        }
-    }
-
-  const double mean_gs = (n_active > 0 && sum_inv_d > 0.0)
-                         ? static_cast<double>(n_active) / sum_inv_d
-                         : 0.0;
-
-  set_mean_grain_size_mineral(cpo_index, data, mineral_i, mean_gs);
-
-  std::cout << "mean grain size = " << mean_gs
+        std::cout << "mean grain size = " << mean_gs
             << "  active grains = " << n_active
             << std::endl;
 
-  Assert(sum_volume_fractions >= 0.0,
+        Assert(sum_volume_fractions >= 0.0,
          ExcMessage("sum_volume_fractions went negative."));
 
-  return sum_volume_fractions;
-}
+        return sum_volume_fractions;
+      }
 
 
       template <int dim>
