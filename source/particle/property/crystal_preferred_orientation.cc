@@ -154,6 +154,7 @@ namespace aspect
         std::vector<double> deformation_type(n_minerals, -1.0);
         std::vector<double> bulk_recrystalized_grain_size(n_minerals, 0.0);
         std::vector<double> mean_grain_size(n_minerals,0.0);
+        std::vector<double> mean_mechanism_ratio(n_minerals,0.0);
         std::vector<int> n_shrink_dead(n_minerals,0);
         std::vector<int> n_curv_dead(n_minerals,0);
         std::vector<int> n_floor(n_minerals,0);
@@ -180,6 +181,7 @@ namespace aspect
         std::vector<std::vector<double >>strain_accumulated(n_minerals);
         std::vector<std::vector<Tensor<1,3>>>rotation_axis(n_minerals);
         std::vector<std::vector<double >>stiffness_ratio(n_minerals);
+         std::vector<std::vector<double >>tau(n_minerals);
         std::vector<std::vector<double >>A_drive(n_minerals);
         std::vector<std::vector<double >>theta(n_minerals);
         std::vector<std::vector<double >>theta_dot(n_minerals);
@@ -198,12 +200,12 @@ namespace aspect
             differential_stress[mineral_i].resize(n_grains);
             strain_energy[mineral_i].resize(n_grains);
             surface_energy[mineral_i].resize(n_grains);
-            grain_boundary_velocity[mineral_i].resize(n_grains);
             grain_size_change[mineral_i].resize(n_grains);
             dislocation_density[mineral_i].resize(n_grains);
             strain_accumulated[mineral_i].resize(n_grains);
             rotation_axis[mineral_i].resize(n_grains);
             stiffness_ratio[mineral_i].resize(n_grains);
+            tau[mineral_i].resize(n_grains);
             A_drive[mineral_i].resize(n_grains);
             theta[mineral_i].resize(n_grains);
             theta_dot[mineral_i].resize(n_grains);
@@ -330,12 +332,12 @@ namespace aspect
                         differential_stress[mineral_i][grain_i] = 0.;
                         strain_energy[mineral_i][grain_i] = 0.;
                         surface_energy[mineral_i][grain_i] = 0.;
-                        grain_boundary_velocity[mineral_i][grain_i] = 0.;
                         grain_size_change[mineral_i][grain_i] = 0.;
                         dislocation_density[mineral_i][grain_i] = 0.;
                         strain_accumulated[mineral_i][grain_i] = 0.;
                         rotation_axis[mineral_i][grain_i] = 0.;
                         stiffness_ratio[mineral_i][grain_i] = 0.;
+                        tau[mineral_i][grain_i] = 0.;
                         A_drive[mineral_i][grain_i] = 0.;
                         theta[mineral_i][grain_i] = 0.;
                         theta_dot[mineral_i][grain_i] = 0.;
@@ -409,12 +411,11 @@ namespace aspect
                         differential_stress[mineral_i][grain_i] = 0.;
                         strain_energy[mineral_i][grain_i] = 0.;
                         surface_energy[mineral_i][grain_i] = 0.;
-                        grain_boundary_velocity[mineral_i][grain_i] = 0.;
-                        grain_size_change[mineral_i][grain_i] = 0.;
                         dislocation_density[mineral_i][grain_i] = 0.;
                         strain_accumulated[mineral_i][grain_i] = 0.;
                         rotation_axis[mineral_i][grain_i] = 0.;
                         stiffness_ratio[mineral_i][grain_i] = 0.;
+                        tau[mineral_i][grain_i] = 0.;
                         A_drive[mineral_i][grain_i] = 0.;
                         theta[mineral_i][grain_i] = 0.;
                         theta_dot[mineral_i][grain_i] = 0.;
@@ -426,50 +427,57 @@ namespace aspect
           }
 
         for (unsigned int mineral_i = 0; mineral_i < n_minerals; ++mineral_i)
-          {
-            data.emplace_back(deformation_type[mineral_i]);
-            data.emplace_back(volume_fractions_minerals[mineral_i]);
-            data.emplace_back(bulk_recrystalized_grain_size[mineral_i]);
-            data.emplace_back(mean_grain_size[mineral_i]);
-            data.emplace_back(mean_mechanism_ratio[mineral_i]);
-            data.emplace_back(n_shrink_dead[mineral_i]);
-            data.emplace_back(n_curv_dead[mineral_i]);
-            data.emplace_back(n_floor[mineral_i]);
-            data.emplace_back(n_ceiling[mineral_i]);
-            data.emplace_back(n_rx_slip[mineral_i]);
-            data.emplace_back(n_alive[mineral_i]);
-            data.emplace_back(kappa[mineral_i]);
-            data.emplace_back(vorticity[mineral_i]);
-            data.emplace_back(sauter_mean[mineral_i]);
-            data.emplace_back(mean_dislocation_density[mineral_i]);
-            for (unsigned int grain_i = 0; grain_i < n_grains ; ++grain_i)
-              {
-                data.emplace_back(volume_fractions_grains[mineral_i][grain_i]);
-                for (unsigned int i = 0; i < Tensor<2,3>::n_independent_components ; ++i)
-                  {
-                    const dealii::TableIndices<2> index = Tensor<2,3>::unrolled_to_component_indices(i);
-                    data.emplace_back(rotation_matrices_grains[mineral_i][grain_i][index]);
-                  }
-                data.emplace_back(grain_status[mineral_i][grain_i]);
-                data.emplace_back(strain_rate_ratio[mineral_i][grain_i]);
-                data.emplace_back(rx_fractions[mineral_i][grain_i]);
-                data.emplace_back(active_slip_system[mineral_i][grain_i]);
-                data.emplace_back(strain_rate[mineral_i][grain_i]);
-                data.emplace_back(strain_energy[mineral_i][grain_i]);
-                data.emplace_back(surface_energy[mineral_i][grain_i]);
-                data.emplace_back(differential_stress[mineral_i][grain_i]);
-                data.emplace_back(grain_size_change[mineral_i][grain_i]);
-                data.emplace_back(dislocation_density[mineral_i][grain_i]);
-                data.emplace_back(strain_accumulated[mineral_i][grain_i]);
-                data.emplace_back(stiffness_ratio[mineral_i][grain_i]);
-                data.emplace_back(A_drive[mineral_i][grain_i]);
-                data.emplace_back(theta[mineral_i][grain_i]);
-                data.emplace_back(theta_dot[mineral_i][grain_i]);
-                data.emplace_back(psi[mineral_i][grain_i]);
-                data.emplace_back(post_rx_grainsize[mineral_i][grain_i]);
-              }
+  {
+    data.emplace_back(deformation_type[mineral_i]);
+    data.emplace_back(volume_fractions_minerals[mineral_i]);
+    data.emplace_back(bulk_recrystalized_grain_size[mineral_i]);
+    data.emplace_back(mean_grain_size[mineral_i]);
+    data.emplace_back(mean_mechanism_ratio[mineral_i]);
+    data.emplace_back(n_shrink_dead[mineral_i]);
+    data.emplace_back(n_curv_dead[mineral_i]);
+    data.emplace_back(n_floor[mineral_i]);
+    data.emplace_back(n_ceiling[mineral_i]);
+    data.emplace_back(n_rx_slip[mineral_i]);
+    data.emplace_back(n_alive[mineral_i]);
+    data.emplace_back(kappa[mineral_i]);
+    data.emplace_back(vorticity[mineral_i]);
+    data.emplace_back(sauter_mean[mineral_i]);
+    data.emplace_back(mean_dislocation_density[mineral_i]);
 
+    for (unsigned int grain_i = 0; grain_i < n_grains; ++grain_i)
+      {
+        data.emplace_back(volume_fractions_grains[mineral_i][grain_i]);         // +0
+
+        for (unsigned int i = 0; i < Tensor<2,3>::n_independent_components; ++i)
+          {
+            const dealii::TableIndices<2> index = Tensor<2,3>::unrolled_to_component_indices(i);
+            data.emplace_back(rotation_matrices_grains[mineral_i][grain_i][index]); // +1..+9
           }
+
+        data.emplace_back(grain_status[mineral_i][grain_i]);                    // +10
+        data.emplace_back(strain_rate_ratio[mineral_i][grain_i]);               // +11
+        data.emplace_back(rx_fractions[mineral_i][grain_i]);                    // +12
+        data.emplace_back(active_slip_system[mineral_i][grain_i]);              // +13
+        data.emplace_back(strain_rate_grains[mineral_i][grain_i]);              // +14
+        data.emplace_back(strain_energy[mineral_i][grain_i]);                   // +15
+        data.emplace_back(surface_energy[mineral_i][grain_i]);                  // +16
+        data.emplace_back(differential_stress[mineral_i][grain_i]);             // +17
+        data.emplace_back(grain_size_change[mineral_i][grain_i]);               // +18
+        data.emplace_back(dislocation_density[mineral_i][grain_i]);             // +19
+        data.emplace_back(strain_accumulated[mineral_i][grain_i]);              // +20
+        data.emplace_back(stiffness_ratio[mineral_i][grain_i]);                 // +21  J
+        data.emplace_back(tau[mineral_i][grain_i]);                             // +22  tau
+        data.emplace_back(A_drive[mineral_i][grain_i]);                         // +23
+        data.emplace_back(theta[mineral_i][grain_i]);                           // +24
+
+        for (unsigned int i = 0; i < 3; ++i)
+          data.emplace_back(rotation_axis[mineral_i][grain_i][i]);              // +25..+27
+
+        data.emplace_back(theta_dot[mineral_i][grain_i]);                       // +28
+        data.emplace_back(psi[mineral_i][grain_i]);                             // +29
+        data.emplace_back(post_rx_grainsize[mineral_i][grain_i]);               // +30
+      }
+  }
       }
 
 
@@ -500,7 +508,7 @@ namespace aspect
             for (unsigned int i = 0; i < dim; ++i)
               velocity_gradient[i] = inputs.gradients[p][this->introspection().component_indices.velocities[i]];
 
-            // Calculate strain rate from velocity gradients
+            // Calculate strain rate from velocity gradient
             const SymmetricTensor<2,dim> strain_rate = symmetrize (velocity_gradient);
             const SymmetricTensor<2,dim> deviatoric_strain_rate
               = (this->get_material_model().is_compressible()
@@ -551,13 +559,24 @@ namespace aspect
                 velocity_gradient_3d[2][1] = velocity_gradient[2][1];
                 velocity_gradient_3d[2][2] = velocity_gradient[2][2];
               }
+            
+            Tensor<2,3> W;
+            for (unsigned int i = 0; i < dim; ++i)
+              for (unsigned int j = 0; j < dim; ++j)
+                  W[i][j] = 0.5 * (velocity_gradient_3d[i][j] - velocity_gradient_3d[j][i]);
+            
+            const double vorticity = (W.norm() > 1e-30)? (W.norm())/(strain_rate.norm()): 0;
+            
+            const auto eigen  = eigenvectors(strain_rate_3d, SymmetricTensorEigenvectorMethod::jacobi);
+            const Tensor<1,3> e_shear = eigen[2].second;
 
             ArrayView<double> data = particle.get_properties();
             const typename DoFHandler<dim>::active_cell_iterator cell(*particle.get_surrounding_cell(),&(this->get_dof_handler()));
-
+            
             for (unsigned int mineral_i = 0; mineral_i < n_minerals; ++mineral_i)
               {
-
+                set_Wk(data_position, data, mineral_i, vorticity);
+           
                 /**
                 * Now we have loaded all the data and can do the actual computation.
                 * The computation consists of two parts. The first part is computing
@@ -607,7 +626,9 @@ namespace aspect
                                                                            data,
                                                                            mineral_i,
                                                                            dt,
-                                                                           derivatives_grains);
+                                                                           e_shear,
+                                                                           derivatives_grains
+                                                                           );
 
                       break;
                   }
@@ -737,6 +758,7 @@ namespace aspect
             property_information.emplace_back("cpo mineral " + std::to_string(mineral_i) + " no. of shrink dead",1);
             property_information.emplace_back("cpo mineral " + std::to_string(mineral_i) + " no. of curvature dead",1);
             property_information.emplace_back("cpo mineral " + std::to_string(mineral_i) + " no. of floor",1);
+            property_information.emplace_back("cpo mineral " + std::to_string(mineral_i) + " no. of ceiling",1);
             property_information.emplace_back("cpo mineral " + std::to_string(mineral_i) + " no. of recrystallization",1);
             property_information.emplace_back("cpo mineral " + std::to_string(mineral_i) + " no. of active grain",1);
             property_information.emplace_back("cpo mineral " + std::to_string(mineral_i) + " kappa",1);
@@ -876,237 +898,349 @@ namespace aspect
       }
 
     
-      template <int dim>
-      double CrystalPreferredOrientation<dim>::advect_exponential_update(const unsigned int cpo_index,
-                                                                         const ArrayView<double> &data,
-                                                                         const unsigned int mineral_i,
-                                                                         const double dt,
-                                                                         const std::pair<std::vector<double>, std::vector<Tensor<2,3>>> &derivatives) const
-      {
-        const double floor_size = 0.5e-6;
-        const double ceil_size  = 1.0;
+template <int dim>
+double
+CrystalPreferredOrientation<dim>::advect_exponential_update(
+    const unsigned int cpo_index,
+    const ArrayView<double> &data,
+    const unsigned int mineral_i,
+    const double dt,
+    const Tensor<1,3> &e_shear,
+    const std::pair<std::vector<double>, std::vector<Tensor<2,3>>> &derivatives
+    ) const
+{
+  const double floor_size = 0.5e-6;
+  const double ceil_size  = 1.0;
 
-        unsigned int n_dead_skip   = 0;
-        unsigned int n_rx_skip     = 0;
-        unsigned int n_etd1        = 0;
-        unsigned int n_be          = 0;
-        unsigned int n_shrink_dead = 0;
-        unsigned int n_curv_dead   = 0;
-        unsigned int n_floor       = 0;
-        unsigned int n_ceiling     = 0;
+  double n_dead_skip   = 0;
+  double n_rx_skip     = 0;
+  double n_etd1        = 0;
+  double n_be          = 0;
+  double n_shrink_dead = 0;
+  double n_curv_dead   = 0;
+  double n_floor       = 0;
+  double n_ceiling     = 0;
+  double n_alive       = 0;
 
-        double sum_volume_fractions = 0.0;
+  const double kappa = get_kappa(cpo_index, data, mineral_i);
 
-        for (unsigned int grain_i = 0; grain_i < n_grains; ++grain_i)
-          {
-            const double d_n    = get_volume_fractions_grains(cpo_index, data, mineral_i, grain_i);
-            const int    status = get_grain_status(cpo_index, data, mineral_i, grain_i);
+  double sum_volume_fractions = 0.0;
 
-            if (d_n <= 0.0 || status < 0)
-              {
-                ++n_dead_skip;
-                set_grain_size_change(cpo_index, data, mineral_i, grain_i, 0.0);
-                sum_volume_fractions += d_n;
-                continue;
-              }
+  for (unsigned int grain_i = 0; grain_i < n_grains; ++grain_i)
+    {
+      const double d_n    = get_volume_fractions_grains(cpo_index, data, mineral_i, grain_i);
+      const int    status = get_grain_status(cpo_index, data, mineral_i, grain_i);
 
-        const double kappa_stored = get_viscosity_ratio(cpo_index, data, mineral_i, grain_i);
-        const double kappa        = std::max(0.0, -kappa_stored);
-        const double R_dn         = derivatives.first[grain_i];
+      // ── Gate 1: dead or buffer slots ──────────────────────────────────────
+      if (d_n <= 0.0 || status < 0)
+        {
+          ++n_dead_skip;
+          set_grain_size_change(cpo_index, data, mineral_i, grain_i, 0.0);
+          sum_volume_fractions += d_n;
+          continue;
+        }
 
-        if (kappa == 0.0 && R_dn == 0.0)
-          {
-            ++n_rx_skip;
-            set_grain_size_change(cpo_index, data, mineral_i, grain_i, 0.0);
-            sum_volume_fractions += d_n;
-            continue;
-          }
+      const double R_dn = derivatives.first[grain_i];
 
-        const double A = R_dn + kappa / d_n;
+      // ── Gate 2: freshly nucleated grains ──────────────────────────────────
+      // compute_derivatives_drexpp zeros R_dn for rx_now grains
+      if (get_strain_accumulated(cpo_index, data, mineral_i, grain_i) == 0.0)
+        {
+          ++n_rx_skip;
+          set_grain_size_change(cpo_index, data, mineral_i, grain_i, 0.0);
+          sum_volume_fractions += d_n;
+          continue;
+        }
 
-        if (!std::isfinite(A) || !std::isfinite(kappa) || !std::isfinite(d_n))
-          {
-            ++n_dead_skip;
-            set_grain_size_change(cpo_index, data, mineral_i, grain_i, 0.0);
-            sum_volume_fractions += d_n;
-            continue;
-          }
+      const double A = R_dn + kappa / d_n;
 
-        double d_new = 0.0;
-        bool   dead  = false;
+      // ── Gate 3: NaN/Inf guard ─────────────────────────────────────────────
+      if (!std::isfinite(A) || !std::isfinite(kappa) || !std::isfinite(d_n))
+        {
+          ++n_dead_skip;
+          set_grain_size_change(cpo_index, data, mineral_i, grain_i, 0.0);
+          sum_volume_fractions += d_n;
+          continue;
+        }
 
-        if (kappa <= 0.0)
-          {
-            d_new = d_n + A * dt;
-            if (d_new <= 0.0)
-              {
-                dead = true;
-                ++n_shrink_dead;
-              }
-            else
+      double d_new = 0.0;
+      bool   dead  = false;
+
+      // ── Case 1: kappa = 0 ─────────────────────────────────────────────────
+      if (kappa <= 0.0)
+        {
+          d_new = d_n + A * dt;
+          if (d_new <= 0.0)
+            {
+              dead = true;
+              ++n_shrink_dead;
+            }
+          else
+            ++n_etd1;
+        }
+      else
+        {
+          const double lambda = kappa / (d_n * d_n);
+          const double J      = lambda * dt;
+
+          // ── ETD1 branch: J < 1 ──────────────────────────────────────────
+          if (J < 1.0)
+            {
+              const double exp_term = std::exp(-J);
+              const double phi      = (J > 1.0e-6)
+                                      ? (1.0 - exp_term) / lambda
+                                      : dt * (1.0 - 0.5*J + J*J/6.0);
+
+              d_new = d_n * exp_term + R_dn * phi;
+
+              if (d_new <= 0.0)
+                {
+                  dead = true;
+                  ++n_shrink_dead;
+                }
+              else
                 ++n_etd1;
-          }
-        else
-          {
-            const double lambda = kappa / (d_n * d_n);
-            const double J      = lambda * dt;
+            }
+          // ── BE quadratic branch: J >= 1 ─────────────────────────────────
+          else
+            {
+              ++n_be;
 
-            if (J < 1.0)
-              {
-                const double exp_term = std::exp(-J);
-                const double phi      = (J > 1.0e-6)
-                                        ? (1.0 - exp_term) / lambda
-                                        : dt * (1.0 - 0.5*J + J*J/6.0);
+              const double B    = d_n + A * dt;
+              const double disc = B * B - 4.0 * kappa * dt;
 
-                d_new = d_n * exp_term + R_dn * phi;
+              if (A <= 0.0)
+                {
+                  // Monotone shrink — take smaller root via Vieta
+                  if (B <= 0.0 || disc < 0.0)
+                    {
+                      dead = true;
+                      ++n_shrink_dead;
+                    }
+                  else
+                    {
+                      const double root_big = 0.5 * (B + std::sqrt(disc));
+                      d_new = (kappa * dt) / root_big;
+                    }
+                }
+              else
+                {
+                  // Stable equilibrium at d* = kappa/A
+                  const double d_star = kappa / A;
 
-                if (d_new <= 0.0)
-                  {
-                    dead = true;
-                    ++n_shrink_dead;
-                  }
-                else
-                  ++n_etd1;
-              }
-            else
-              {
-                ++n_be;
-
-                const double B    = d_n + A * dt;
-                const double disc = B * B - 4.0 * kappa * dt;
-
-                if (A <= 0.0)
-                  {
-                    if (B <= 0.0 || disc < 0.0)
-                      {
+                  if (disc < 0.0)
+                    {
+                      ++n_curv_dead;
+                      if (A < 1.0e-20)
                         dead = true;
-                        ++n_shrink_dead;
-                      }
-                    else
-                      {
-                        const double root_big = 0.5 * (B + std::sqrt(disc));
-                        d_new = (kappa * dt) / root_big;
-                      }
-                  }
-                else
-                  {
-                    const double d_star = kappa / A;
+                      else
+                        d_new = d_star;
+                    }
+                  else
+                    {
+                      const double sq         = std::sqrt(disc);
+                      const double root_big   = 0.5 * (B + sq);
+                      const double root_small = (kappa * dt) / root_big;
 
-                    if (disc < 0.0)
-                      {
-                        ++n_curv_dead;
-                        if (A < 1.0e-20)
-                          dead = true;
-                        else
-                          d_new = d_star;
-                      }
-                    else
-                      {
-                        const double sq         = std::sqrt(disc);
-                        const double root_big   = 0.5 * (B + sq);
-                        const double root_small = (kappa * dt) / root_big;
+                      const double lo  = std::min(d_n, d_star);
+                      const double hi  = std::max(d_n, d_star);
+                      const double tol = 1.0e-12 * hi;
 
-                        const double lo  = std::min(d_n, d_star);
-                        const double hi  = std::max(d_n, d_star);
-                        const double tol = 1.0e-12 * hi;
+                      const bool big_in   = (root_big   >= lo - tol) &&
+                                            (root_big   <= hi + tol);
+                      const bool small_in = (root_small >= lo - tol) &&
+                                            (root_small <= hi + tol);
 
-                        const bool big_in   = (root_big   >= lo - tol) &&
-                                              (root_big   <= hi + tol);
-                        const bool small_in = (root_small >= lo - tol) &&
-                                              (root_small <= hi + tol);
-
-                        if (big_in && !small_in)
-                          d_new = root_big;
-                        else if (small_in && !big_in)
-                          d_new = root_small;
-                        else if (big_in && small_in)
-                          {
-                            if (std::abs(root_big - d_n) < std::abs(root_small - d_n))
-                              d_new = root_big;
-                            else
-                              d_new = root_small;
-                          }
-                        else
-                          d_new = d_star;
-                       }
+                      if (big_in && !small_in)
+                        d_new = root_big;
+                      else if (small_in && !big_in)
+                        d_new = root_small;
+                      else if (big_in && small_in)
+                        {
+                          if (std::abs(root_big - d_n) < std::abs(root_small - d_n))
+                            d_new = root_big;
+                          else
+                            d_new = root_small;
+                        }
+                      else
+                        d_new = d_star;
                     }
                 }
             }
+        }
 
-        if (!dead)
-          {
-            if (d_new < floor_size)
-              {
-                dead = true;
-                ++n_floor;
-              }
-            else if (d_new > ceil_size)
-              {
-                ++n_ceiling;
-                d_new = ceil_size;
-              }
-          }
-
-        if (dead)
-          {
-            d_new = 0.0;
-            set_grain_status(cpo_index, data, mineral_i, grain_i, -1);
-          }
-
-        set_volume_fractions_grains(cpo_index, data, mineral_i, grain_i, d_new);
-        set_grain_size_change(cpo_index, data, mineral_i, grain_i, d_new - d_n);
-        sum_volume_fractions += d_new;
-
-        Tensor<2,3> cosine_ref = get_rotation_matrix_grains(cpo_index, data, mineral_i, grain_i);
-        Tensor<2,3> cosine_old = cosine_ref;
-        Tensor<2,3> cosine_new = cosine_ref;
-
-        for (size_t iteration = 0; iteration < property_advection_max_iterations; ++iteration)
-          {
-            cosine_new = cosine_ref + dt * derivatives.second[grain_i] * cosine_new;
-            if ((cosine_new - cosine_old).norm() < property_advection_tolerance)
-              break;
-            cosine_old = cosine_new;
-          }
-        set_rotation_matrix_grains(cpo_index, data, mineral_i, grain_i, cosine_new);
-      }
-
-       std::cout << "GS"
-                 << "  etd1="        << n_etd1
-                 << "  be="          << n_be
-                 << "  dead_skip="   << n_dead_skip
-                 << "  rx_skip="     << n_rx_skip
-                 << "  shrink_dead=" << n_shrink_dead
-                 << "  curv_dead="   << n_curv_dead
-                 << "  floor="       << n_floor
-                 << "  ceiling="     << n_ceiling
-                 << std::endl;
-
-       double sum_inv_d = 0.0;
-       int n_active  = 0;
-
-      for (unsigned int grain_i = 0; grain_i < n_grains; ++grain_i)
+      // ── Floor and ceiling guards ───────────────────────────────────────────
+      if (!dead)
         {
-          const double d = get_volume_fractions_grains(cpo_index, data, mineral_i, grain_i);
-          if (d > 0.0)
+          if (d_new < floor_size)
             {
-              sum_inv_d += 1.0 / d;
-              ++n_active;
+              dead = true;
+              ++n_floor;
+            }
+          else if (d_new > ceil_size)
+            {
+              ++n_ceiling;
+              d_new = ceil_size;
             }
         }
 
+      // ── Commit grain size ──────────────────────────────────────────────────
+      if (dead)
+        {
+          d_new = 0.0;
+          set_grain_status(cpo_index, data, mineral_i, grain_i, -1);
+        }
+      else
+        ++n_alive;
+
+      set_volume_fractions_grains(cpo_index, data, mineral_i, grain_i, d_new);
+      set_grain_size_change(cpo_index, data, mineral_i, grain_i, d_new - d_n);
+      sum_volume_fractions += d_new;
+
+      // ── Store grain-level integrator diagnostics ───────────────────────────
+      const double lambda_diag = (d_n > 0.0) ? kappa / (d_n * d_n) : 0.0;
+      const double J_diag      = lambda_diag * dt;
+      const double tau_diag    = (std::abs(R_dn) > 1.0e-30)
+                                 ? d_n / std::abs(R_dn)
+                                 : std::numeric_limits<double>::max();
+
+      set_J(cpo_index, data, mineral_i, grain_i, J_diag);
+      set_tau(cpo_index, data, mineral_i, grain_i, tau_diag);
+      set_A_drive(cpo_index, data, mineral_i, grain_i, A);
+
+      // ── DCM update ─────────────────────────────────────────────────────────
+      const Tensor<2,3> cosine_ref = get_rotation_matrix_grains(cpo_index, data, mineral_i, grain_i);
+      Tensor<2,3> cosine_old = cosine_ref;
+      Tensor<2,3> cosine_new = cosine_ref;
+
+      for (size_t iteration = 0; iteration < property_advection_max_iterations; ++iteration)
+        {
+          cosine_new = cosine_ref + dt * derivatives.second[grain_i] * cosine_new;
+          if ((cosine_new - cosine_old).norm() < property_advection_tolerance)
+            break;
+          cosine_old = cosine_new;
+        }
+      set_rotation_matrix_grains(cpo_index, data, mineral_i, grain_i, cosine_new);
+
+      // ── Rotation kinematics diagnostics ───────────────────────────────────
+
+      // Relative rotation this step
+      const Tensor<2,3> delta_R = cosine_new * transpose(cosine_ref);
+
+      // Misorientation angle
+      const double trace_dR = delta_R[0][0] + delta_R[1][1] + delta_R[2][2];
+      const double cos_theta = std::max(-1.0, std::min(1.0, 0.5 * (trace_dR - 1.0)));
+      const double theta     = std::acos(cos_theta);
+
+      // Rotation axis in sample frame
+      double nx = 0.0, ny = 0.0, nz = 0.0;
+      const Tensor<2,3> &Omega = derivatives.second[grain_i];
+
+      if (theta < 1.0e-6)
+        {
+          // Small angle: use spin tensor axial vector
+          const double wx = -Omega[1][2];
+          const double wy =  Omega[0][2];
+          const double wz = -Omega[0][1];
+          const double w_norm = std::sqrt(wx*wx + wy*wy + wz*wz);
+          if (w_norm > 1.0e-30)
+            { nx = wx/w_norm; ny = wy/w_norm; nz = wz/w_norm; }
+        }
+      else if (theta > M_PI - 1.0e-6)
+        {
+          // Near 180 degrees: axis from symmetric part of delta_R
+          const double xx = delta_R[0][0] + 1.0;
+          const double yy = delta_R[1][1] + 1.0;
+          const double zz = delta_R[2][2] + 1.0;
+          if (xx >= yy && xx >= zz)
+            {
+              nx = std::sqrt(xx * 0.5);
+              ny = (delta_R[0][1] + delta_R[1][0]) / (4.0 * nx);
+              nz = (delta_R[0][2] + delta_R[2][0]) / (4.0 * nx);
+            }
+          else if (yy >= xx && yy >= zz)
+            {
+              ny = std::sqrt(yy * 0.5);
+              nx = (delta_R[0][1] + delta_R[1][0]) / (4.0 * ny);
+              nz = (delta_R[1][2] + delta_R[2][1]) / (4.0 * ny);
+            }
+          else
+            {
+              nz = std::sqrt(zz * 0.5);
+              nx = (delta_R[0][2] + delta_R[2][0]) / (4.0 * nz);
+              ny = (delta_R[1][2] + delta_R[2][1]) / (4.0 * nz);
+            }
+          const double n_norm = std::sqrt(nx*nx + ny*ny + nz*nz);
+          if (n_norm > 1.0e-30)
+            { nx /= n_norm; ny /= n_norm; nz /= n_norm; }
+        }
+      else
+        {
+          // General case: exact axis-angle
+          const double two_sin_theta = 2.0 * std::sin(theta);
+          nx = (delta_R[2][1] - delta_R[1][2]) / two_sin_theta;
+          ny = (delta_R[0][2] - delta_R[2][0]) / two_sin_theta;
+          nz = (delta_R[1][0] - delta_R[0][1]) / two_sin_theta;
+        }
+
+      // Transform rotation axis to crystal frame: n_crystal = R_new^T * n_sample
+      Tensor<1,3> n_sample;
+      n_sample[0] = nx; n_sample[1] = ny; n_sample[2] = nz;
+      const Tensor<1,3> n_crystal = transpose(cosine_new) * n_sample;
+
+      // Instantaneous spin rate: ||Omega||_F / sqrt(2)
+      double frob_sq = 0.0;
+      for (unsigned int i = 0; i < 3; ++i)
+        for (unsigned int j = 0; j < 3; ++j)
+          frob_sq += Omega[i][j] * Omega[i][j];
+      const double theta_dot = std::sqrt(0.5 * frob_sq);
+
+      // Fabric angle: angle between [100] axis and e_shear
+      // [100] axis = first column of cosine_new (crystal to sample mapping)
+      Tensor<1,3> a100;
+      a100[0] = cosine_new[0][0];
+      a100[1] = cosine_new[1][0];
+      a100[2] = cosine_new[2][0];
+      const double cos_psi = std::abs(a100 * e_shear);
+      const double psi     = std::acos(std::min(1.0, cos_psi));
+
+      set_theta(cpo_index, data, mineral_i, grain_i, theta);
+      set_rotation_axis(cpo_index, data, mineral_i, grain_i, n_crystal);
+      set_theta_dot(cpo_index, data, mineral_i, grain_i, theta_dot);
+      set_psi(cpo_index, data, mineral_i, grain_i, psi);
+
+    } // end grain loop
+
+  // ── Store mineral-level death counts ──────────────────────────────────────
+  set_n_shrink_dead(cpo_index, data, mineral_i, n_shrink_dead);
+  set_n_curv_dead  (cpo_index, data, mineral_i, n_curv_dead);
+  set_n_floor      (cpo_index, data, mineral_i, n_floor);
+  set_n_ceiling    (cpo_index, data, mineral_i, n_ceiling);
+  set_n_rx_skip    (cpo_index, data, mineral_i, n_rx_skip);
+  set_n_alive      (cpo_index, data, mineral_i, n_alive);
+
+  // ── Mean grain size: harmonic mean over surviving active grains ────────────
+  double sum_inv_d = 0.0;
+  int    n_active  = 0;
+
+      for (unsigned int grain_i = 0; grain_i < n_grains; ++grain_i)
+      {
+      const double d = get_volume_fractions_grains(cpo_index, data, mineral_i, grain_i);
+      if (d > 0.0)
+        {
+          sum_inv_d += 1.0 / d;
+          ++n_active;
+        }
+      }
+
         const double mean_gs = (n_active > 0 && sum_inv_d > 0.0)
-                              ? static_cast<double>(n_active) / sum_inv_d
-                              : 0.0;
+                                ? static_cast<double>(n_active) / sum_inv_d
+                                : 0.0;
 
         set_mean_grain_size_mineral(cpo_index, data, mineral_i, mean_gs);
 
-        std::cout << "mean grain size = " << mean_gs
-            << "  active grains = " << n_active
-            << std::endl;
-
         Assert(sum_volume_fractions >= 0.0,
-         ExcMessage("sum_volume_fractions went negative."));
+           ExcMessage("sum_volume_fractions went negative."));
 
         return sum_volume_fractions;
       }
@@ -1242,8 +1376,10 @@ namespace aspect
                     piezometer = 1.0;
 
                   set_bulk_recrystalization_grain_size_mineral(cpo_index,data,mineral_i,piezometer);
+                  const double cpo_kappa = 2.0 * drexpp_mobility[mineral_i] * interfacial_energy;
+                  set_kappa(cpo_index,data,mineral_i,cpo_kappa);
                 }
-
+              
               //
               const double gravity_norm = this->get_gravity_model().gravity_vector(position).norm();
               const double reference_density = (this->get_adiabatic_conditions().is_initialized())
@@ -1609,7 +1745,6 @@ namespace aspect
                                                             std::vector<double> &piezometer,
                                                             std::vector<bool> &rx_now) const
       {
-
         std::vector<std::size_t> permutation_vector;
         std::vector<std::size_t> empty_buffer_vector;
         std::vector<std::size_t> buffer_vector;
@@ -1668,7 +1803,6 @@ namespace aspect
                 no_recrystalized_grains = (std::floor(recrystalized_fraction[grain_i] * (area/rx_area)));
                 if (no_recrystalized_grains >= n_grains_buffer) 
                   no_recrystalized_grains = n_grains_buffer - 1 ;
-               //std::cout<<"grain_i = "<<grain_i<<", area = "<<area<<", rx_area = "<<rx_area<<", recrystalized_fraction[grain_i] = "<<recrystalized_fraction[grain_i]<<", no_recrystalized_grains = "<<no_recrystalized_grains<<std::endl;  
               }
             else
               no_recrystalized_grains = 0;
@@ -1722,8 +1856,21 @@ namespace aspect
                         set_volume_fractions_grains(cpo_index,data,mineral_i,permutation_vector[random_var],piezometer[grain_i]);
                         set_rotation_matrix_grains(cpo_index,data,mineral_i,permutation_vector[random_var],rotation_matrix * parent_orientation);
                         set_grain_status(cpo_index,data,mineral_i,permutation_vector[random_var],1);
-                        set_dislocation_density(cpo_index,data,mineral_i,permutation_vector[random_var],initial_dislocation_density);
-                        set_strain_rate_ratio(cpo_index,data,mineral_i,permutation_vector[random_var],0.0);
+                        set_rx_fractions(cpo_index, data, mineral_i, permutation_vector[random_var], 0.0);
+                        const Tensor<1,3> axis_crystal = transpose(rotation_matrix * parent_orientation) * sgr_rotation_axis[grain_i];
+                        set_rotation_axis(cpo_index, data, mineral_i, permutation_vector[random_var], axis_crystal);
+set_strain_accumulated(cpo_index, data, mineral_i, permutation_vector[random_var], 0.0);
+set_strain_energy(cpo_index, data, mineral_i, permutation_vector[random_var], 0.0);
+set_surface_energy(cpo_index, data, mineral_i, permutation_vector[random_var], 0.0);
+set_differential_stress(cpo_index, data, mineral_i, permutation_vector[random_var], 0.0);
+set_grain_size_change(cpo_index, data, mineral_i, permutation_vector[random_var], 0.0);
+set_J(cpo_index, data, mineral_i, permutation_vector[random_var], 0.0);
+set_tau(cpo_index, data, mineral_i, permutation_vector[random_var], 0.0);
+set_A_drive(cpo_index, data, mineral_i, permutation_vector[random_var], 0.0);
+set_theta(cpo_index, data, mineral_i, permutation_vector[random_var], 0.0);
+set_theta_dot(cpo_index, data, mineral_i, permutation_vector[random_var], 0.0);
+set_psi(cpo_index, data, mineral_i, permutation_vector[random_var], 0.0);
+set_post_rx_grainsize(cpo_index, data, mineral_i, permutation_vector[random_var],0.0);
                         rx_now[permutation_vector[random_var]] = true;
                         permutation_vector.erase(permutation_vector.begin() + random_var);
                       }
@@ -1738,10 +1885,23 @@ namespace aspect
                           {
                             int random_var = std::rand() % empty_buffer_vector.size();
                             set_volume_fractions_grains(cpo_index,data,mineral_i,empty_buffer_vector[random_var],piezometer[grain_i]);
-                            set_dislocation_density(cpo_index,data,mineral_i,empty_buffer_vector[random_var],initial_dislocation_density);
                             set_rotation_matrix_grains(cpo_index,data,mineral_i,empty_buffer_vector[random_var],rotation_matrix * parent_orientation);
                             set_grain_status(cpo_index,data,mineral_i,empty_buffer_vector[random_var],2);
-                            set_strain_rate_ratio(cpo_index,data,mineral_i,empty_buffer_vector[random_var],0.0);
+                            set_rx_fractions(cpo_index, data, mineral_i, empty_buffer_vector[random_var], 0.0);
+                            const Tensor<1,3> axis_crystal = transpose(rotation_matrix * parent_orientation) * sgr_rotation_axis[grain_i];
+                            set_rotation_axis(cpo_index, data, mineral_i, empty_buffer_vector[random_var], axis_crystal);
+set_strain_accumulated(cpo_index, data, mineral_i, empty_buffer_vector[random_var], 0.0);
+set_strain_energy(cpo_index, data, mineral_i, empty_buffer_vector[random_var], 0.0);
+set_surface_energy(cpo_index, data, mineral_i, empty_buffer_vector[random_var], 0.0);
+set_differential_stress(cpo_index, data, mineral_i, empty_buffer_vector[random_var], 0.0);
+set_grain_size_change(cpo_index, data, mineral_i, empty_buffer_vector[random_var], 0.0);
+set_J(cpo_index, data, mineral_i, empty_buffer_vector[random_var], 0.0);
+set_tau(cpo_index, data, mineral_i, empty_buffer_vector[random_var], 0.0);
+set_A_drive(cpo_index, data, mineral_i, empty_buffer_vector[random_var], 0.0);
+set_theta(cpo_index, data, mineral_i, empty_buffer_vector[random_var], 0.0);
+set_theta_dot(cpo_index, data, mineral_i, empty_buffer_vector[random_var], 0.0);
+set_psi(cpo_index, data, mineral_i, empty_buffer_vector[random_var], 0.0);
+set_post_rx_grainsize(cpo_index, data, mineral_i, empty_buffer_vector[random_var], 0.0);
                             rx_now[empty_buffer_vector[random_var]] = true;
                             empty_buffer_vector.erase(empty_buffer_vector.begin() + random_var);
                           }
@@ -1780,7 +1940,6 @@ namespace aspect
                             set_volume_fractions_grains(cpo_index,data,mineral_i,buffer_vector[buffer_vector_counter],2.0 *std::pow((replaced_area/numbers::PI),1./2.));
                             set_rotation_matrix_grains(cpo_index,data,mineral_i,buffer_vector[buffer_vector_counter],rotation_matrix * parent_orientation );
                             set_grain_status(cpo_index,data,mineral_i,buffer_vector[buffer_vector_counter],3);
-                            set_dislocation_density(cpo_index,data,mineral_i,buffer_vector[buffer_vector_counter],initial_dislocation_density);
                             set_strain_accumulated(cpo_index,data,mineral_i,buffer_vector[buffer_vector_counter],0.0);
                             set_rx_fractions(cpo_index,data,mineral_i,buffer_vector[buffer_vector_counter],0.);
                             set_strain_rate_ratio(cpo_index,data,mineral_i,buffer_vector[buffer_vector_counter],0.0);
@@ -1792,11 +1951,21 @@ namespace aspect
                           {
                             set_volume_fractions_grains(cpo_index,data,mineral_i,buffer_vector[buffer_vector_counter],piezometer[grain_i]);
                             set_rotation_matrix_grains(cpo_index,data,mineral_i,buffer_vector[buffer_vector_counter],rotation_matrix * parent_orientation );
+                            const Tensor<1,3> axis_crystal = transpose(rotation_matrix * parent_orientation) * sgr_rotation_axis[grain_i];
+                            set_rotation_axis(cpo_index, data, mineral_i, buffer_vector[buffer_vector_counter], axis_crystal);
                             set_grain_status(cpo_index,data,mineral_i,buffer_vector[buffer_vector_counter],4);
-                            set_dislocation_density(cpo_index,data,mineral_i,buffer_vector[buffer_vector_counter],initial_dislocation_density);
-                            set_strain_accumulated(cpo_index,data,mineral_i,buffer_vector[buffer_vector_counter],0.0);
-                            set_rx_fractions(cpo_index,data,mineral_i,buffer_vector[buffer_vector_counter],0.);
-                            set_strain_rate_ratio(cpo_index,data,mineral_i,buffer_vector[buffer_vector_counter],0.0);
+set_strain_accumulated(cpo_index, data, mineral_i, buffer_vector[buffer_vector_counter], 0.0);
+set_strain_energy(cpo_index, data, mineral_i, buffer_vector[buffer_vector_counter], 0.0);
+set_surface_energy(cpo_index, data, mineral_i, buffer_vector[buffer_vector_counter], 0.0);
+set_differential_stress(cpo_index, data, mineral_i, buffer_vector[buffer_vector_counter], 0.0);
+set_grain_size_change(cpo_index, data, mineral_i, buffer_vector[buffer_vector_counter], 0.0);
+set_J(cpo_index, data, mineral_i, buffer_vector[buffer_vector_counter], 0.0);
+set_tau(cpo_index, data, mineral_i, buffer_vector[buffer_vector_counter], 0.0);
+set_A_drive(cpo_index, data, mineral_i, buffer_vector[buffer_vector_counter], 0.0);
+set_theta(cpo_index, data, mineral_i, buffer_vector[buffer_vector_counter], 0.0);
+set_theta_dot(cpo_index, data, mineral_i, buffer_vector[buffer_vector_counter], 0.0);
+set_psi(cpo_index, data, mineral_i, buffer_vector[buffer_vector_counter], 0.0);
+set_post_rx_grainsize(cpo_index, data, mineral_i, buffer_vector[buffer_vector_counter], 0.0);
                             rx_now[buffer_vector[buffer_vector_counter]] = true;
                             buffer_vector_counter++;
                           }
@@ -2160,6 +2329,7 @@ namespace aspect
                     const double area =  numbers::PI * std::pow(grain_size,2.0);
                     sum_area += area;
                     mean_dislocation_density += area * get_dislocation_density(cpo_index,data,mineral_i,grain_i);
+                    set_post_rx_grainsize(cpo_index,data,mineral_i,grain_i,grain_size);
                   }
                 else
                   {
@@ -2173,9 +2343,12 @@ namespace aspect
         
         if (sum_grainsize > 0.0)
           mean_grainsize = sum_grainsize_sq/sum_grainsize;
-
+        
         Assert(isfinite(mean_dislocation_density), ExcMessage("mean dislocation density is not finite: " + std::to_string(mean_dislocation_density) + "."));
         Assert(isfinite(mean_grainsize), ExcMessage("mean grain size is not finite: " + std::to_string(mean_grainsize) + "."));
+        
+        set_mean_dislocation_density(cpo_index,data,mineral_i,mean_dislocation_density);
+        set_sauter_mean(cpo_index,data,mineral_i,mean_grainsize);
 
         for (unsigned int grain_i = 0; grain_i < n_grains; ++grain_i)
           {
@@ -2191,24 +2364,18 @@ namespace aspect
               {
                   double Fstrain = 0.5 * shear_modulus * burgers_vector * burgers_vector * (mean_dislocation_density - get_dislocation_density(cpo_index,data,mineral_i,grain_i));
                   double Fsurface = 2.0 * interfacial_energy * ((1.0/mean_grainsize) - (1.0/volume_fraction_grain));
-                  set_energy_ratio(cpo_index,data,mineral_i,grain_i,Fstrain/Fsurface);
                   set_strain_energy(cpo_index,data,mineral_i,grain_i,Fstrain);
                   set_surface_energy(cpo_index,data,mineral_i,grain_i,Fsurface);
-                  const double d_timestep = (-1.0 * 2.0 * drexpp_mobility[mineral_i] * interfacial_energy);
-                  set_viscosity_ratio(cpo_index,data,mineral_i,grain_i,d_timestep);
                   // Different than D-Rex. Here we actually only compute the derivative and do not multiply it with the volume_fractions. We do that when we advect.
                   deriv_volume_fractions[grain_i] = get_volume_fraction_mineral(cpo_index,data,mineral_i) *  drexpp_mobility[mineral_i] * (Fstrain + Fsurface);
               }
             else
               {
-                set_viscosity_ratio(cpo_index,data,mineral_i,grain_i, 0.0);
-                set_energy_ratio(cpo_index,data,mineral_i,grain_i,0.0);
                 set_strain_energy(cpo_index,data,mineral_i,grain_i,0.0);
                 set_surface_energy(cpo_index,data,mineral_i,grain_i,0.0);
                 deriv_volume_fractions[grain_i] = 0.;
               }
 
-            set_grain_boundary_velocity(cpo_index,data,mineral_i,grain_i,deriv_volume_fractions[grain_i]);
           }
 
         return std::pair<std::vector<double>, std::vector<Tensor<2,3>>>(deriv_volume_fractions, deriv_a_cosine_matrices);
