@@ -1376,8 +1376,7 @@ CrystalPreferredOrientation<dim>::advect_exponential_update(
                     piezometer = 1.0;
 
                   set_bulk_recrystalization_grain_size_mineral(cpo_index,data,mineral_i,piezometer);
-                  const double cpo_kappa = 2.0 * drexpp_mobility[mineral_i] * interfacial_energy;
-                  set_kappa(cpo_index,data,mineral_i,cpo_kappa);
+                  
                 }
               
               //
@@ -1719,6 +1718,9 @@ CrystalPreferredOrientation<dim>::advect_exponential_update(
                 strain_energy[grain_i] = 0;
               }
           }
+        
+        const double cpo_kappa = 2.0 * mobility * interfacial_energy;
+        set_kappa(cpo_index,data,mineral_i,cpo_kappa);
 
         // Change of volume fraction of grains by grain boundary migration
         for (unsigned int grain_i = 0; grain_i < n_grains; ++grain_i)
@@ -2031,6 +2033,7 @@ set_post_rx_grainsize(cpo_index, data, mineral_i, buffer_vector[buffer_vector_co
         
         const double bulk_piezometer = 0.015 * std::pow(differential_stress/1e6,-1.33);
         const double field_boundary = std::pow((dislocation_creep/(diffusion_pre_strainrate* differential_stress)),(-1.0/3.5));
+        
         
         if(time != 0.0)
        {
@@ -2367,7 +2370,7 @@ set_post_rx_grainsize(cpo_index, data, mineral_i, buffer_vector[buffer_vector_co
                   set_strain_energy(cpo_index,data,mineral_i,grain_i,Fstrain);
                   set_surface_energy(cpo_index,data,mineral_i,grain_i,Fsurface);
                   // Different than D-Rex. Here we actually only compute the derivative and do not multiply it with the volume_fractions. We do that when we advect.
-                  deriv_volume_fractions[grain_i] = get_volume_fraction_mineral(cpo_index,data,mineral_i) *  drexpp_mobility[mineral_i] * (Fstrain + Fsurface);
+                  deriv_volume_fractions[grain_i] = get_volume_fraction_mineral(cpo_index,data,mineral_i) *  grain_boundary_mobility * (Fstrain + Fsurface);
               }
             else
               {
