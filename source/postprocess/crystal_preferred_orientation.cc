@@ -1096,7 +1096,7 @@ namespace aspect
         return Output::DislocationDensity;
       if (string == "Strain accumulated")
         return Output::StrainAccumulated;
-      if (string == "Stiffnes ratio")
+      if (string == "Stiffness ratio")
         return Output::StiffnesRatio;
       if (string == "ODE Timescale")
         return Output::ODETimescale;
@@ -1106,8 +1106,6 @@ namespace aspect
         return Output::MisAngle;
       if (string == "Rotation axis")
         return Output::RotAxis;
-      if (string == "Rotation rate")
-        return Output::RotRate;
       if (string == "Rotation rate")
         return Output::RotRate;
       if (string == "Phi angle")

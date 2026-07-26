@@ -1096,7 +1096,7 @@ CrystalPreferredOrientation<dim>::advect_exponential_update(
       set_volume_fractions_grains(cpo_index, data, mineral_i, grain_i, d_new);
       set_grain_size_change(cpo_index, data, mineral_i, grain_i, d_new - d_n);
       sum_volume_fractions += d_new;
-
+      
       // ── Store grain-level integrator diagnostics ───────────────────────────
       const double lambda_diag = (d_n > 0.0) ? kappa / (d_n * d_n) : 0.0;
       const double J_diag      = lambda_diag * dt;
@@ -1218,7 +1218,7 @@ CrystalPreferredOrientation<dim>::advect_exponential_update(
   set_n_ceiling    (cpo_index, data, mineral_i, n_ceiling);
   set_n_rx_skip    (cpo_index, data, mineral_i, n_rx_skip);
   set_n_alive      (cpo_index, data, mineral_i, n_alive);
-
+  std::cout<<"grains alive = "<<n_alive<<std::endl;
   // ── Mean grain size: harmonic mean over surviving active grains ────────────
   double sum_inv_d = 0.0;
   int    n_active  = 0;
@@ -1376,8 +1376,7 @@ CrystalPreferredOrientation<dim>::advect_exponential_update(
                     piezometer = 1.0;
 
                   set_bulk_recrystalization_grain_size_mineral(cpo_index,data,mineral_i,piezometer);
-                  const double cpo_kappa = 2.0 * drexpp_mobility[mineral_i] * interfacial_energy;
-                  set_kappa(cpo_index,data,mineral_i,cpo_kappa);
+                  
                 }
               
               //
@@ -2012,6 +2011,8 @@ set_post_rx_grainsize(cpo_index, data, mineral_i, buffer_vector[buffer_vector_co
         std::vector<SymmetricTensor<2,3>> dislocation_strain_rate_3d(n_grains);
         std::vector<Tensor<2,3>> dislocation_velocity_gradient_3d(n_grains);
 
+        const double grain_boundary_mobility = (2 * std::pow(10,-11)) * std::exp(-1.0 * (1.33 * std::pow(10,5)/(8.314 * temperature)));
+        
         // Finding the largest value of tau to use to calculate the dislocation density.
         // Since the inactive slip system is given an artificially high value of \tau,
         // we need to find the second largest value (or the active slip system with the largest value of \tau)
@@ -2028,14 +2029,19 @@ set_post_rx_grainsize(cpo_index, data, mineral_i, buffer_vector[buffer_vector_co
         const std::array< double, dim > eigenvalues = dealii::eigenvalues(deviatoric_stress);
         const double differential_stress = eigenvalues[0]-eigenvalues[dim-1];
         const double dislocation_creep = dislocation_factor * std::pow(differential_stress,dislocation_stress_exponent);
+        double bulk_piezometer;
+
+        if(differential_stress!= 0.0)
+          bulk_piezometer = 0.015 * std::pow(differential_stress/1e6,-1.33);
+        else
+          bulk_piezometer = 0.5;
+
+        if((time != 0.0)&&(differential_stress!= 0.0))
+          {
+            const double field_boundary = std::pow((dislocation_creep/(diffusion_pre_strainrate* differential_stress)),(-1.0/3.5));
+            std::cout<<"field boundary = "<<field_boundary<<"\t bulk piezometer = "<<bulk_piezometer<<"\t mean grain size = "<<get_mean_grain_size_mineral(cpo_index,data,mineral_i)<<std::endl;
+          }  
         
-        const double bulk_piezometer = 0.015 * std::pow(differential_stress/1e6,-1.33);
-        const double field_boundary = std::pow((dislocation_creep/(diffusion_pre_strainrate* differential_stress)),(-1.0/3.5));
-        
-        if(time != 0.0)
-       {
-        std::cout<<"field boundary = "<<field_boundary<<"\t bulk piezometer = "<<bulk_piezometer<<"\t mean grain size = "<<get_mean_grain_size_mineral(cpo_index,data,mineral_i)<<std::endl;
-       }
         // Calculation of the mechanism ratio for each grain
 
         for (unsigned int i_grain = 0; i_grain < n_grains; ++i_grain)
@@ -2111,7 +2117,6 @@ set_post_rx_grainsize(cpo_index, data, mineral_i, buffer_vector[buffer_vector_co
         // create local variables
         std::vector<Tensor<1,3>> spin_vectors(n_grains);
         
-        const double grain_boundary_mobility = (2 * std::pow(10,-11)) * std::exp(-1.0 * (1.33 * std::pow(10,5)/(8.314 * temperature)));
         // Olivine shear modulus and burgers vector (Currently hard coded, can be generalized as code evolves)
         const double shear_modulus = 8.0 * std::pow(10.0,10.0);
         const double burgers_vector = 5.0 * std::pow(10.0,-10.0);
@@ -2349,6 +2354,9 @@ set_post_rx_grainsize(cpo_index, data, mineral_i, buffer_vector[buffer_vector_co
         
         set_mean_dislocation_density(cpo_index,data,mineral_i,mean_dislocation_density);
         set_sauter_mean(cpo_index,data,mineral_i,mean_grainsize);
+        
+        const double cpo_kappa = 2.0 * grain_boundary_mobility * interfacial_energy;
+        set_kappa(cpo_index,data,mineral_i,cpo_kappa);
 
         for (unsigned int grain_i = 0; grain_i < n_grains; ++grain_i)
           {
@@ -2367,7 +2375,7 @@ set_post_rx_grainsize(cpo_index, data, mineral_i, buffer_vector[buffer_vector_co
                   set_strain_energy(cpo_index,data,mineral_i,grain_i,Fstrain);
                   set_surface_energy(cpo_index,data,mineral_i,grain_i,Fsurface);
                   // Different than D-Rex. Here we actually only compute the derivative and do not multiply it with the volume_fractions. We do that when we advect.
-                  deriv_volume_fractions[grain_i] = get_volume_fraction_mineral(cpo_index,data,mineral_i) *  drexpp_mobility[mineral_i] * (Fstrain + Fsurface);
+                  deriv_volume_fractions[grain_i] = get_volume_fraction_mineral(cpo_index,data,mineral_i) *  grain_boundary_mobility * (Fstrain + Fsurface);
               }
             else
               {
@@ -2495,8 +2503,8 @@ set_post_rx_grainsize(cpo_index, data, mineral_i, buffer_vector[buffer_vector_co
             // Becker et al., 2007 (http://www-udc.ig.utexas.edu/external/becker/preprints/bke07.pdf)
             case DeformationType::olivine_a_fabric :
               ref_resolved_shear_stress[0] = 1;
-              ref_resolved_shear_stress[1] = 2;
-              ref_resolved_shear_stress[2] = 3;
+              ref_resolved_shear_stress[1] = 7;
+              ref_resolved_shear_stress[2] = 10;
               ref_resolved_shear_stress[3] = max_value;
               break;
 
