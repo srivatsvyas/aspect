@@ -1719,9 +1719,7 @@ CrystalPreferredOrientation<dim>::advect_exponential_update(
               }
           }
         
-        const double cpo_kappa = 2.0 * mobility * interfacial_energy;
-        set_kappa(cpo_index,data,mineral_i,cpo_kappa);
-
+        
         // Change of volume fraction of grains by grain boundary migration
         for (unsigned int grain_i = 0; grain_i < n_grains; ++grain_i)
           {
@@ -2034,11 +2032,10 @@ set_post_rx_grainsize(cpo_index, data, mineral_i, buffer_vector[buffer_vector_co
         const double bulk_piezometer = 0.015 * std::pow(differential_stress/1e6,-1.33);
         const double field_boundary = std::pow((dislocation_creep/(diffusion_pre_strainrate* differential_stress)),(-1.0/3.5));
         
-        
         if(time != 0.0)
-       {
-        std::cout<<"field boundary = "<<field_boundary<<"\t bulk piezometer = "<<bulk_piezometer<<"\t mean grain size = "<<get_mean_grain_size_mineral(cpo_index,data,mineral_i)<<std::endl;
-       }
+         {
+           std::cout<<"field boundary = "<<field_boundary<<"\t bulk piezometer = "<<bulk_piezometer<<"\t mean grain size = "<<get_mean_grain_size_mineral(cpo_index,data,mineral_i)<<std::endl;
+         }
         // Calculation of the mechanism ratio for each grain
 
         for (unsigned int i_grain = 0; i_grain < n_grains; ++i_grain)
@@ -2115,6 +2112,10 @@ set_post_rx_grainsize(cpo_index, data, mineral_i, buffer_vector[buffer_vector_co
         std::vector<Tensor<1,3>> spin_vectors(n_grains);
         
         const double grain_boundary_mobility = (2 * std::pow(10,-11)) * std::exp(-1.0 * (1.33 * std::pow(10,5)/(8.314 * temperature)));
+        
+        const double cpo_kappa = 2.0 * mobility * interfacial_energy;
+        set_kappa(cpo_index,data,mineral_i,cpo_kappa);
+
         // Olivine shear modulus and burgers vector (Currently hard coded, can be generalized as code evolves)
         const double shear_modulus = 8.0 * std::pow(10.0,10.0);
         const double burgers_vector = 5.0 * std::pow(10.0,-10.0);
@@ -2266,11 +2267,16 @@ set_post_rx_grainsize(cpo_index, data, mineral_i, buffer_vector[buffer_vector_co
                     strain_energy[grain_i] = shear_modulus * burgers_vector * burgers_vector * dislocation_density[grain_i];
                     set_dislocation_density(cpo_index,data,mineral_i,grain_i,dislocation_density[grain_i]);
                   }
-           
               }
           }
-
-        // Calculating rx kinetics
+        
+        const double avrami_n = 1.48;
+        const double gamma_c  = 0.25;
+        const double avrami_C = std::exp(-10.0);   // pre-exponential (ln C = -10.0)
+        const double avrami_g = 13.8;              // homologous-T sensitivity
+        const double T_melt   = 1873.15;           // 1600 C in K, fixed for prelim runs
+        const double beta    = avrami_C * std::exp(avrami_g * (temperature / T_melt));
+        
         for (unsigned int grain_i = 0; grain_i < n_grains; ++grain_i)
           {
             if ((time != 0) && (get_differential_stress(cpo_index,data,mineral_i,grain_i) > 0.))
@@ -2281,25 +2287,34 @@ set_post_rx_grainsize(cpo_index, data, mineral_i, buffer_vector[buffer_vector_co
               {
                 piezometer[grain_i] = 0.5;
               }
+          }
 
+        // Calculating rx kinetics
+        for (unsigned int grain_i = 0; grain_i < n_grains; ++grain_i)
+          {         
             if ((get_volume_fractions_grains(cpo_index,data,mineral_i,grain_i) > 0.) && (get_strain_accumulated(cpo_index,data,mineral_i,grain_i) >= 0.25))
               {
-                recrystalized_fractions[grain_i] = get_rx_fractions(cpo_index,data,mineral_i,grain_i);
-                if (strain_accumulated[grain_i] - 0.25 < strain_increment[grain_i])
-                  {
-                    recrystalized_fractions[grain_i] += (avrami_slope_input * (get_strain_accumulated(cpo_index,data,mineral_i,grain_i) - 0.25));
-                  }
-                else
-                  recrystalized_fractions[grain_i] += (avrami_slope_input * strain_increment[grain_i]);
+                const double gamma_now = get_strain_accumulated(cpo_index,data,mineral_i,grain_i);
+                const double d = std::max(0.0, gamma_now - gamma_c);
+                
+                const double dgamma = get_strain_rate(cpo_index,data,mineral_i,grain_i) * this->get_timestep();
+                const double dXdg = avrami_n * beta * std::pow(d, avrami_n - 1.0)
+                                    * std::exp(-beta * std::pow(d, avrami_n));
 
-                if (recrystalized_fractions[grain_i] > 1.0)
-                  recrystalized_fractions[grain_i] = 1.0;
+                const double dX   = dXdg * dgamma;
+                double X = get_rx_fractions(cpo_index, data, mineral_i, grain_i) + dX;
+
+                if (X > 1.0)
+                  X = 1.0;
+
+                recrystalized_fractions[grain_i] = X;
+                set_rx_fractions(cpo_index,data,mineral_i,grain_i,X);
               }
             else
               {
                 recrystalized_fractions[grain_i] = 0.0;
+                set_rx_fractions(cpo_index, data, mineral_i, grain_i, 0.0);
               }
-            set_rx_fractions(cpo_index,data,mineral_i,grain_i,recrystalized_fractions[grain_i]);
           }
 
         // Calling the rx module to carry out dynamic recrystallization
@@ -2311,8 +2326,7 @@ set_post_rx_grainsize(cpo_index, data, mineral_i, buffer_vector[buffer_vector_co
                                   piezometer,
                                   rx_now);
 
-
-        // Calculating mean strain energy
+       // Calculating mean strain energy
         double mean_dislocation_density = 0.0;
         double sum_area = 0.;
         double sum_grainsize = 0.0;
@@ -2365,12 +2379,12 @@ set_post_rx_grainsize(cpo_index, data, mineral_i, buffer_vector[buffer_vector_co
             double volume_fraction_grain = get_volume_fractions_grains(cpo_index,data,mineral_i,grain_i);
             if ((volume_fraction_grain != 0.0) && (rx_now[grain_i]) == false && this->get_time() != 0)
               {
-                  double Fstrain = 0.5 * shear_modulus * burgers_vector * burgers_vector * (mean_dislocation_density - get_dislocation_density(cpo_index,data,mineral_i,grain_i));
-                  double Fsurface = 2.0 * interfacial_energy * ((1.0/mean_grainsize) - (1.0/volume_fraction_grain));
-                  set_strain_energy(cpo_index,data,mineral_i,grain_i,Fstrain);
-                  set_surface_energy(cpo_index,data,mineral_i,grain_i,Fsurface);
-                  // Different than D-Rex. Here we actually only compute the derivative and do not multiply it with the volume_fractions. We do that when we advect.
-                  deriv_volume_fractions[grain_i] = get_volume_fraction_mineral(cpo_index,data,mineral_i) *  grain_boundary_mobility * (Fstrain + Fsurface);
+                double Fstrain = 0.5 * shear_modulus * burgers_vector * burgers_vector * (mean_dislocation_density - get_dislocation_density(cpo_index,data,mineral_i,grain_i));
+                double Fsurface = 2.0 * interfacial_energy * ((1.0/mean_grainsize) - (1.0/volume_fraction_grain));
+                set_strain_energy(cpo_index,data,mineral_i,grain_i,Fstrain);
+                set_surface_energy(cpo_index,data,mineral_i,grain_i,Fsurface);
+                // Different than D-Rex. Here we actually only compute the derivative and do not multiply it with the volume_fractions. We do that when we advect.
+                deriv_volume_fractions[grain_i] = get_volume_fraction_mineral(cpo_index,data,mineral_i) * grain_boundary_mobility * (Fstrain + Fsurface);
               }
             else
               {
@@ -2378,9 +2392,7 @@ set_post_rx_grainsize(cpo_index, data, mineral_i, buffer_vector[buffer_vector_co
                 set_surface_energy(cpo_index,data,mineral_i,grain_i,0.0);
                 deriv_volume_fractions[grain_i] = 0.;
               }
-
           }
-
         return std::pair<std::vector<double>, std::vector<Tensor<2,3>>>(deriv_volume_fractions, deriv_a_cosine_matrices);
       }
 
