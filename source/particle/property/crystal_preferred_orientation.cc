@@ -562,6 +562,15 @@ namespace aspect
                                                                        derivatives_grains);
 
                       break;
+                    
+                    case AdvectionMethod::exponential_update:
+                      sum_volume_mineral = this->advect_exponential_update(data_position,
+                                                                           data,
+                                                                           mineral_i,
+                                                                           dt,
+                                                                           derivatives_grains);
+
+                      break;
                   }
 
                 // normalize the volume fractions back to a total of 1 for each mineral
@@ -972,10 +981,90 @@ namespace aspect
           }
       }
 
+template <int dim>
+double
+CrystalPreferredOrientation<dim>::advect_exponential_update(const unsigned int cpo_index,
+                                                              const ArrayView<double> &data,
+                                                              const unsigned int mineral_i,
+                                                              const double dt,
+                                                              const std::pair<std::vector<double>, std::vector<Tensor<2,3>>> &derivatives) const
+{
+  double sum_volume_fractions = 0;
 
+  for (unsigned int grain_i = 0; grain_i < n_grains; ++grain_i)
+    {
+      const double d_n     = get_volume_fractions_grains(cpo_index,data,mineral_i,grain_i);
+      const double kappa = 2.0 * drexpp_mobility[mineral_i] * interfacial_energy;
+      const double R_n     = derivatives.first[grain_i] - (kappa / d_n);                // rate at d_n (sign varies)
+      const double lambda  = kappa / (d_n * d_n);            // always > 0
 
+      const double t_eff = std::min(dt, 1.0 / lambda);
 
+      const double exp_term = std::exp(lambda * t_eff);      // bounded: max ~e, since lambda*t_eff <= 1
+      double d_new = d_n + (R_n / lambda) * (exp_term - 1.0);
 
+      if (d_new <= 0.5e-6)
+        {
+          d_new = 0.0;
+          set_grain_status(cpo_index, data, mineral_i, grain_i, -1);
+        }
+
+      Assert(std::isfinite(d_new), ExcMessage("ETD1 grain-size update produced non-finite value."));
+
+      set_volume_fractions_grains(cpo_index,data,mineral_i,grain_i,d_new);
+      sum_volume_fractions += d_new;
+
+      // Do the rotation matrix for this grain
+      Tensor<2,3> cosine_ref = get_rotation_matrix_grains(cpo_index,data,mineral_i,grain_i);
+      Tensor<2,3> cosine_old = cosine_ref;
+      Tensor<2,3> cosine_new = cosine_ref;
+
+      for (size_t iteration = 0; iteration < property_advection_max_iterations; ++iteration)
+        {
+          cosine_new = cosine_ref + dt * cosine_new * derivatives.second[grain_i];
+          if ((cosine_new-cosine_old).norm() < property_advection_tolerance)
+            {
+              break;
+            }
+          cosine_old = cosine_new;
+        }
+
+      set_rotation_matrix_grains(cpo_index,data,mineral_i,grain_i,cosine_new);
+    }
+
+  double mean_mechanism_ratio = 0.0;
+  double sum_grain_size = 0.0;
+  int n_grains_considered = 0;
+
+  // Calculation of the mean grain size and mechanism ratio.
+  // The mean calculated for the grain size distribution is harmonic.
+  // The arithmetic mean of the mechanism ratios is calculated here.
+  for (unsigned int i_grain = 0; i_grain < n_grains; ++i_grain)
+    {
+      if (get_volume_fractions_grains(cpo_index,data,mineral_i,i_grain) > 0.)
+        {
+          sum_grain_size += 1.0 / (get_volume_fractions_grains(cpo_index,data,mineral_i,i_grain));
+          n_grains_considered += 1;
+          mean_mechanism_ratio += get_strain_rate_ratio(cpo_index,data,mineral_i,i_grain);
+        }
+    }
+
+  if (n_grains_considered > 0)
+    {
+      const double mean_grain_size = std::pow((sum_grain_size/n_grains_considered), -1.0);
+      set_mean_grain_size_mineral(cpo_index,data,mineral_i,mean_grain_size);
+      set_mean_mechanism_ratio_mineral(cpo_index,data,mineral_i,mean_mechanism_ratio/n_grains_considered);
+      Assert(mean_grain_size > 0, ExcMessage("mean grain size is less than zero. mineral_i = "
+                                              + std::to_string(mineral_i) + ", mean grain size = " + std::to_string(mean_grain_size)));
+    }
+  else
+    {
+      set_mean_grain_size_mineral(cpo_index,data,mineral_i,0.);
+    }
+
+  Assert(sum_volume_fractions != 0, ExcMessage("The sum of all grain volume fractions of a mineral is equal to zero. This should not happen."));
+  return sum_volume_fractions;
+}
       template <int dim>
       std::pair<std::vector<double>, std::vector<Tensor<2,3>>>
       CrystalPreferredOrientation<dim>::compute_derivatives(const unsigned int cpo_index,
@@ -2505,6 +2594,10 @@ namespace aspect
           else if (temp_advection_method == "Backward Euler")
             {
               advection_method = AdvectionMethod::backward_euler;
+            }
+          else if (temp_advection_method == "Exponential Update")
+            {
+              advection_method = AdvectionMethod::exponential_update;
             }
           else
             {

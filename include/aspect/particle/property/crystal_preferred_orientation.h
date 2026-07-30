@@ -77,7 +77,7 @@ namespace aspect
        */
       enum class AdvectionMethod
       {
-        forward_euler, backward_euler
+        forward_euler, backward_euler, exponential_update
       };
 
       /**
@@ -1227,6 +1227,12 @@ namespace aspect
                                 const double dt,
                                 const std::pair<std::vector<double>, std::vector<Tensor<2,3>>> &derivatives) const;
 
+          double
+          advect_exponential_update(const unsigned int cpo_index,
+                                    const ArrayView<double> &data,
+                                    const unsigned int mineral_i,
+                                    const double dt,
+                                    const std::pair<std::vector<double>, std::vector<Tensor<2,3>>> &derivatives) const;
 
           /**
            * Computes and returns the volume fraction and grain orientation derivatives such that
