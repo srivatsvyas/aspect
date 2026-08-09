@@ -848,7 +848,7 @@ namespace aspect
                             // If the change is greater than the threshold, the amount of change permitted is clamped to the threshold value.
                             // The threshold value is added if the grain boundary velocity is positive.
                             // The threshold value is subtracted if the grain boundary velocity is negative.
-                            if (get_energy_ratio(cpo_index,data,mineral_i,grain_i) >= 1.0)
+                            if (get_strain_rate_ratio(cpo_index,data,mineral_i,grain_i)>= 0.5)
                               {
                                 if (std::abs(dt * (( numbers::PI * std::pow(vf_new* 0.5,2.))/area_sum) * derivatives.first[grain_i]) <= (0.5 *get_bulk_recrystalization_grain_size_mineral(cpo_index,data,mineral_i)))
                                   {
@@ -871,7 +871,7 @@ namespace aspect
                                       }
                                   }
                               }
-                            else if ((get_energy_ratio(cpo_index,data,mineral_i,grain_i) < 1.0) && (get_energy_ratio(cpo_index,data,mineral_i,grain_i) != 0.0))
+                            else if ((get_strain_rate_ratio(cpo_index,data,mineral_i,grain_i) < 0.5) && (get_strain_rate_ratio(cpo_index,data,mineral_i,grain_i)!= 0.0))
                               {
                                 // Case B: Low-energy grain (energy ratio < 1).
                                 // Recovery is driven by GG.
@@ -1720,6 +1720,7 @@ namespace aspect
         const double time =this-> get_time();
         const double timestep =this-> get_timestep();
 
+        const double grain_boundary_mobility = 2 * std::pow(10.0,-11.0) * std::exp(-1.0 * (1.33 * 10.0e5)/(constants::gas_constant * temperature));
         // create output variables
         std::vector<double> deriv_volume_fractions(n_grains);
         std::vector<Tensor<2,3>> deriv_a_cosine_matrices(n_grains);
@@ -1763,7 +1764,7 @@ namespace aspect
                 const double grain_size = get_volume_fractions_grains(cpo_index,data,mineral_i,i_grain);
                 const double diffusion_strain_rate = diffusion_pre_strainrate * differential_stress * std::pow(grain_size, -1.0 * diffusion_grain_size_exponent);
                 double mechanism_ratio = 0.0;
-                set_viscosity_ratio(cpo_index,data,mineral_i,i_grain,grain_size);
+                
                 if (time != 0)
                   {
                     mechanism_ratio = diffusion_strain_rate/(diffusion_strain_rate + dislocation_creep);
@@ -2074,7 +2075,7 @@ namespace aspect
               {
                 const double ratio = strain_energy/std::abs(surface_energy);
                 set_energy_ratio(cpo_index,data,mineral_i,grain_i,ratio);
-                if (ratio >= 1.0)
+                if (get_strain_rate_ratio(cpo_index,data,mineral_i,grain_i)>= 0.5)
                   {
                     const double area =  numbers::PI * std::pow(get_volume_fractions_grains(cpo_index,data,mineral_i,grain_i),2.0);
                     mean_strain_energy += area * get_strain_energy(cpo_index,data,mineral_i,grain_i);
@@ -2097,9 +2098,10 @@ namespace aspect
         for (unsigned int grain_i = 0; grain_i < n_grains; ++grain_i)
           {
             double volume_fraction_grain = get_volume_fractions_grains(cpo_index,data,mineral_i,grain_i);
+           set_viscosity_ratio(cpo_index,data,mineral_i,grain_i,volume_fraction_grain);
             if ((volume_fraction_grain != 0.0) && (rx_now[grain_i]) == false)
               {
-                if (get_energy_ratio(cpo_index,data,mineral_i,grain_i) >= 1.)
+                if (get_strain_rate_ratio(cpo_index,data,mineral_i,grain_i)>= 0.5)
                   {
                     // Different than D-Rex. Here we actually only compute the derivative and do not multiply it with the volume_fractions. We do that when we advect.
                     deriv_volume_fractions[grain_i] = get_volume_fraction_mineral(cpo_index,data,mineral_i) *  drexpp_mobility[mineral_i] * (mean_strain_energy - get_strain_energy(cpo_index,data,mineral_i,grain_i));
