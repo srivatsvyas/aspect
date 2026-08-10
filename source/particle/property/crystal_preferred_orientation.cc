@@ -1615,6 +1615,8 @@ namespace aspect
                         set_rotation_matrix_grains(cpo_index,data,mineral_i,permutation_vector[random_var],rotation_matrix * parent_orientation);
                         set_grain_status(cpo_index,data,mineral_i,permutation_vector[random_var],1);
                         set_strain_rate_ratio(cpo_index,data,mineral_i,permutation_vector[random_var],0.0);
+                        set_strain_accumulated(cpo_index,data,mineral_i,permutation_vector[random_var],0.0);
+                            
                         rx_now[permutation_vector[random_var]] = true;
                         permutation_vector.erase(permutation_vector.begin() + random_var);
                       }
@@ -1632,6 +1634,8 @@ namespace aspect
                             set_rotation_matrix_grains(cpo_index,data,mineral_i,empty_buffer_vector[random_var],rotation_matrix * parent_orientation);
                             set_grain_status(cpo_index,data,mineral_i,empty_buffer_vector[random_var],2);
                             set_strain_rate_ratio(cpo_index,data,mineral_i,empty_buffer_vector[random_var],0.0);
+                            set_strain_accumulated(cpo_index,data,mineral_i,empty_buffer_vector[random_var],0.0);
+                            
                             set_energy_ratio(cpo_index,data,mineral_i,empty_buffer_vector[random_var], 0.0);
                             rx_now[empty_buffer_vector[random_var]] = true;
                             empty_buffer_vector.erase(empty_buffer_vector.begin() + random_var);
@@ -1988,7 +1992,15 @@ namespace aspect
               }
           }
 
-        // Calculating rx kinetics
+        
+// Calculating rx kinetics
+        const double Tm      = 1873.15; // K, fixed for preliminary runs
+        const double C       = std::exp(-10.0);
+        const double g       = 13.8;
+        const double n_avr   = 1.48;
+        const double gamma_c = 0.25;
+        const double beta    = C * std::exp(g * temperature / Tm);
+
         for (unsigned int grain_i = 0; grain_i < n_grains; ++grain_i)
           {
             if ((time != 0) && (get_differential_stress(cpo_index,data,mineral_i,grain_i) > 0.))
@@ -2003,12 +2015,21 @@ namespace aspect
             if ((get_volume_fractions_grains(cpo_index,data,mineral_i,grain_i) > 0.) && (get_strain_accumulated(cpo_index,data,mineral_i,grain_i) >= 0.25))
               {
                 recrystalized_fractions[grain_i] = get_rx_fractions(cpo_index,data,mineral_i,grain_i);
-                if (strain_accumulated[grain_i] - 0.25 < strain_increment[grain_i])
-                  {
-                    recrystalized_fractions[grain_i] += (avrami_slope_input * (get_strain_accumulated(cpo_index,data,mineral_i,grain_i) - 0.25));
-                  }
+
+                double dgamma;
+                if (get_strain_accumulated(cpo_index,data,mineral_i,grain_i) - gamma_c < strain_increment[grain_i])
+                  dgamma = get_strain_accumulated(cpo_index,data,mineral_i,grain_i) - gamma_c;
                 else
-                  recrystalized_fractions[grain_i] += (avrami_slope_input * strain_increment[grain_i]);
+                  dgamma = strain_increment[grain_i];
+
+                const double gamma_minus_gc = get_strain_accumulated(cpo_index,data,mineral_i,grain_i) - gamma_c;
+
+                const double dX = n_avr * beta
+                                   * std::pow(gamma_minus_gc, n_avr - 1.0)
+                                   * std::exp(-beta * std::pow(gamma_minus_gc, n_avr))
+                                   * dgamma;
+
+                recrystalized_fractions[grain_i] += dX;
 
                 if (recrystalized_fractions[grain_i] > 1.0)
                   recrystalized_fractions[grain_i] = 1.0;
