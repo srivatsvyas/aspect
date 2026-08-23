@@ -121,7 +121,7 @@ namespace aspect
          */
         enum class Output
         {
-          VolumeFraction, RotationMatrix, EulerAngles, GrainStatus, StrainrateRatio, RxFraction, StrainAccumulated, EnergyRatio,not_found
+          VolumeFraction, RotationMatrix, EulerAngles, GrainStatus, StrainrateRatio, RxFraction, StrainAccumulated, not_found
         };
 
         /**
