@@ -1885,7 +1885,7 @@ namespace aspect
                 // this and writes each term using the indices created when calculating bigI.
                 // Note tau = RRSS = (tau_m^s/tau_o), this why we get tau^(p-n)
 
-                if (get_volume_fractions_grains(cpo_index,data,mineral_i,grain_i) > 0.)
+                if ((get_volume_fractions_grains(cpo_index,data,mineral_i,grain_i) > 0.)&& (time != 0.))
                   {
                     const double non_dimensionalization = std::sqrt(std::max(-second_invariant(d_sym), 0.));
                     const double ref_stress = std::pow(non_dimensionalization/dislocation_factor,1.0/dislocation_stress_exponent);
