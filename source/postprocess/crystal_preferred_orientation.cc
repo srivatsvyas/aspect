@@ -327,6 +327,14 @@ namespace aspect
                     string_stream_content_raw << "mineral_" << write_raw_cpo[property_i].first << "_energy_ratio" << " ";
                     break;
 
+                  case Output::Omega:
+                    string_stream_content_raw << "mineral_" << write_raw_cpo[property_i].first << "_omega" << " ";
+                    break;
+
+                  case Output::Gamma:
+                    string_stream_content_raw << "mineral_" << write_raw_cpo[property_i].first << "_gamma" << " ";
+                    break;
+
                   default:
                     Assert(false, ExcMessage("Internal error: raw CPO postprocess case not found."));
                     break;
@@ -422,6 +430,14 @@ namespace aspect
                     string_stream_content_draw_volume_weighting << "mineral_" << write_draw_volume_weighted_cpo[property_i].first << "_energy_ratio" << " ";
                     break;
 
+                  case Output::Omega:
+                    string_stream_content_draw_volume_weighting << "mineral_" << write_draw_volume_weighted_cpo[property_i].first << "_omega" << " ";
+                    break;
+
+                  case Output::Gamma:
+                    string_stream_content_draw_volume_weighting << "mineral_" << write_draw_volume_weighted_cpo[property_i].first << "_gamma" << " ";
+                    break;
+                    
                   default:
                     Assert(false, ExcMessage("Internal error: raw CPO postprocess case not found."));
                     break;
@@ -634,6 +650,22 @@ namespace aspect
                                                        write_raw_cpo[property_i].first,
                                                        grain) << " ";
                             break;
+                          
+                          case Output::Omega:
+                            string_stream_content_raw<< cpo_particle_property.get_omega(
+                                                       cpo_data_position,
+                                                       properties,
+                                                       write_raw_cpo[property_i].first,
+                                                       grain) << " ";
+                            break;
+
+                          case Output::Gamma:
+                            string_stream_content_raw<< cpo_particle_property.get_gamma(
+                                                       cpo_data_position,
+                                                       properties,
+                                                       write_raw_cpo[property_i].first,
+                                                       grain) << " ";
+                            break;
 
                           default:
                             Assert(false, ExcMessage("Internal error: raw CPO postprocess case not found."));
@@ -815,6 +847,22 @@ namespace aspect
                                                                          write_raw_cpo[property_i].first,
                                                                          grain) << " ";
                             break;
+                          
+                          case Output::Omega:
+                            string_stream_content_draw_volume_weighting<< cpo_particle_property.get_omega(
+                                                                         cpo_data_position,
+                                                                         properties,
+                                                                         write_raw_cpo[property_i].first,
+                                                                         grain) << " ";
+                            break;
+                          
+                          case Output::Gamma:
+                            string_stream_content_draw_volume_weighting<< cpo_particle_property.get_gamma(
+                                                                         cpo_data_position,
+                                                                         properties,
+                                                                         write_raw_cpo[property_i].first,
+                                                                         grain) << " ";
+                            break;
 
                           default:
                             Assert(false, ExcMessage("Internal error: raw CPO postprocess case not found."));
@@ -968,6 +1016,10 @@ namespace aspect
         return Output::StrainAccumulated;
       if (string == "Energy ratio")
         return Output::EnergyRatio;
+      if (string == "Omega")
+        return Output::Omega;
+      if (string == "Gamma")
+        return Output::Gamma;
       else
         return Output::not_found;
     }

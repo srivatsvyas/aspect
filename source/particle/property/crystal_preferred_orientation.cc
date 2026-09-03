@@ -170,6 +170,8 @@ namespace aspect
         std::vector<std::vector<double >>dislocation_density(n_minerals);
         std::vector<std::vector<double >>strain_accumulated(n_minerals);
         std::vector<std::vector<double >>energy_ratio(n_minerals);
+        std::vector<std::vector<double >>gamma(n_minerals);
+        std::vector<std::vector<double >>omega(n_minerals);
 
         for (unsigned int mineral_i = 0; mineral_i < n_minerals; ++mineral_i)
           {
@@ -189,7 +191,8 @@ namespace aspect
             dislocation_density[mineral_i].resize(n_grains);
             strain_accumulated[mineral_i].resize(n_grains);
             energy_ratio[mineral_i].resize(n_grains);
-
+            gamma[mineral_i].resize(n_grains);
+            omega[mineral_i].resize(n_grains);
 
             // This will be set by the initial grain subsection.
             if (initial_grains_model == CPOInitialGrainsModel::world_builder)
@@ -317,6 +320,8 @@ namespace aspect
                         dislocation_density[mineral_i][grain_i] =0.;
                         strain_accumulated[mineral_i][grain_i] =0.;
                         energy_ratio[mineral_i][grain_i] =0.;
+                        gamma[mineral_i][grain_i] =0.;
+                        omega[mineral_i][grain_i] =0.;
                       }
 
                     int grains  = 0;
@@ -393,6 +398,8 @@ namespace aspect
                         dislocation_density[mineral_i][grain_i] =0.;
                         strain_accumulated[mineral_i][grain_i] =0.;
                         energy_ratio[mineral_i][grain_i] =0.;
+                        gamma[mineral_i][grain_i] =0.;
+                        omega[mineral_i][grain_i] =0.;
                       }
                   }
 
@@ -428,6 +435,8 @@ namespace aspect
                 data.emplace_back(dislocation_density[mineral_i][grain_i]);
                 data.emplace_back(strain_accumulated[mineral_i][grain_i]);
                 data.emplace_back(energy_ratio[mineral_i][grain_i]);
+                data.emplace_back(omega[mineral_i][grain_i]);
+                data.emplace_back(gamma[mineral_i][grain_i]);
               }
 
           }
@@ -711,6 +720,8 @@ namespace aspect
                 property_information.emplace_back("cpo mineral " + std::to_string(mineral_i) + " grain " + std::to_string(grain_i) + " dislocation density",1);
                 property_information.emplace_back("cpo mineral " + std::to_string(mineral_i) + " grain " + std::to_string(grain_i) + " strain accumulated",1);
                 property_information.emplace_back("cpo mineral " + std::to_string(mineral_i) + " grain " + std::to_string(grain_i) + " energy_ratio",1);
+                property_information.emplace_back("cpo mineral " + std::to_string(mineral_i) + " grain " + std::to_string(grain_i) + " omega",1);
+                property_information.emplace_back("cpo mineral " + std::to_string(mineral_i) + " grain " + std::to_string(grain_i) + " gamma",1);
               }
           }
 
@@ -1729,9 +1740,8 @@ template <int dim>
         const double time =this-> get_time();
         const double timestep =this-> get_timestep();
         
-        const double grain_boundary_mobility = 2 * std::pow(10.0,-11.0) * std::exp(-1.0 * (1.33 * std::pow(10.0,5.0))/(constants::gas_constant * temperature));
-        //std::cout<<"temperature = " << temperature << " exponential term = "<< std::exp(-1.0 * (1.33 * std::pow(10.0,5.0))/(constants::gas_constant * temperature)) << " total number = "<<2 * std::pow(10.0,-11.0) * std::exp(-1.0 * (1.33 * std::pow(10.0,5.0))/(constants::gas_constant * temperature))<< std::endl;
-        //std::cout << "grain_boundary_mobility = " << grain_boundary_mobility << std::endl;
+        //const double grain_boundary_mobility = 2 * std::pow(10.0,-11.0) * std::exp(-1.0 * (1.33 * std::pow(10.0,5.0))/(constants::gas_constant * temperature));
+        const double grain_boundary_mobility = 0.0;
         // create output variables
         std::vector<double> deriv_volume_fractions(n_grains);
         std::vector<Tensor<2,3>> deriv_a_cosine_matrices(n_grains);
@@ -1949,7 +1959,8 @@ template <int dim>
                   0.5*(dislocation_velocity_gradient_3d[grain_i][0][2]-dislocation_velocity_gradient_3d[grain_i][2][0]) - 0.5*(schmidt_tensor[0][2]-schmidt_tensor[2][0]) *gamma,
                   0.5*(dislocation_velocity_gradient_3d[grain_i][1][0]-dislocation_velocity_gradient_3d[grain_i][0][1]) - 0.5*(schmidt_tensor[1][0]-schmidt_tensor[0][1]) *gamma
                 });
-
+                set_gamma(cpo_index,data,mineral_i,grain_i,gamma);
+                set_omega(cpo_index,data,mineral_i,grain_i,spin_vectors[grain_i].norm());
                 Tensor<2,3> d_ij;
                 // Calculating the microscopic velocity gradient D_{ij}
                 // This is done to calculate the strain rate that arises due to slip along slip systems.
@@ -2079,7 +2090,7 @@ template <int dim>
               {
                 recrystalized_fractions[grain_i] = 0.0;
               }
-            set_rx_fractions(cpo_index,data,mineral_i,grain_i,0.0);
+            set_rx_fractions(cpo_index,data,mineral_i,grain_i,recrystalized_fractions[grain_i]);
           }
 
         // Calling the rx module to carry out dynamic recrystallization
@@ -2306,8 +2317,8 @@ template <int dim>
             // Becker et al., 2007 (http://www-udc.ig.utexas.edu/external/becker/preprints/bke07.pdf)
             case DeformationType::olivine_a_fabric :
               ref_resolved_shear_stress[0] = 1;
-              ref_resolved_shear_stress[1] = 2;
-              ref_resolved_shear_stress[2] = 3;
+              ref_resolved_shear_stress[1] = 7;
+              ref_resolved_shear_stress[2] = 10;
               ref_resolved_shear_stress[3] = max_value;
               break;
 
